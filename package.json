@@ -1,0 +1,19 @@
+{
+  "name": "tiltocracy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:server": "tsx server/index.ts",
+    "dev:web": "vite --host 0.0.0.0",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build"
+  },
+  "dependencies": { "ws": "^8.18.0" },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "@types/ws": "^8.18.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0"
+  }
+}

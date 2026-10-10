@@ -147,3 +147,59 @@ Tiltocracy is built as a real-time multiplayer web experience with a focus on:
 ## Knight Hacks IX
 
 Tiltocracy was created for **Knight Hacks IX** at UCF.
+
+## Milestone 1 Development — Dummy Vectors
+
+The current implementation supports one in-memory room per server process, host
+room creation, controller joining, two dummy sliders per phone, and host displays
+for each player’s vector and their arithmetic mean. Components are independently
+bounded to [-1, 1]; neutral players count, and an empty room has mean (0, 0).
+
+With Node.js 22.12+ installed, run:
+
+```bash
+npm install
+```
+
+Start the room server and Vite in separate terminals:
+
+```bash
+npm run dev:server
+```
+
+```bash
+npm run dev:web
+```
+
+On the host laptop, open `http://<laptop-LAN-IP>:5173/apps/host/` and click
+**Create room**. On two phones on the same Wi-Fi, open
+`http://<laptop-LAN-IP>:5173/apps/controller/` and enter the displayed room code
+and a name. Use the laptop's LAN IP, not `localhost`, for phone access.
+Allow local network access through the laptop firewall if needed; Wi-Fi client
+isolation can prevent connections. Vite proxies `/ws` to the room server on port
+8080, so browsers only need access to port 5173.
+
+### Manual Milestone 1 test
+
+1. Create a room on the host; verify a six-digit code appears.
+2. Join from two phones with distinct names; verify both names and a count of 2
+   appear on the host.
+3. Set both phones to (1, 0): mean must be (1, 0). Set the second to (-1, 0):
+   mean must be (0, 0). Set the first to (1, 1) and second to (0, 0): mean must
+   be (0.5, 0.5). Verify individual numeric values and arrow directions.
+4. Try an invalid room code in another browser; verify an error, then retry with
+   the correct code and verify joining succeeds.
+5. Close a phone tab; verify its player is removed once the socket closes.
+   Immediate detection of lost connectivity is outside this milestone.
+6. Close the host tab; verify controllers show that the room closed.
+7. Open a fresh host page and create a new room; verify a new room can be opened.
+
+Run `npm run typecheck` and `npm run build` for local checks. The build produces
+frontend assets only; the documented two-process development setup supplies the
+WebSocket proxy. There is no production deployment setup or reconnect system yet.
+
+For an IPv6-only hotspot, start Vite with `npm run dev:web -- --host ::`.
+Use the Mac’s current IPv6 address in brackets:
+`http://[<Mac-IPv6-address>]:5173/apps/controller/index.html`.
+The address may change when reconnecting. On the laptop the host remains at
+`http://localhost:5173/apps/host/index.html`.
