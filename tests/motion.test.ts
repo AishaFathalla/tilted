@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { landscapeAngle, motionTarget, smoothVector } from "../apps/controller/motion";
+import { motionTarget, screenAngle, smoothVector } from "../apps/controller/motion";
 
 const neutral = { beta: 15, gamma: -5 };
 const near = (actual: number, expected: number) => assert.ok(Math.abs(actual - expected) < 1e-10, `${actual} != ${expected}`);
@@ -49,9 +49,30 @@ test("both landscape sides keep screen directions consistent", () => {
     near(up.x, 0); near(up.y, 1);
   }
 });
-test("screen angles support both sides and Safari negative angles; reject portrait", () => {
-  assert.equal(landscapeAngle(90), 90);
-  assert.equal(landscapeAngle(270), 270);
-  assert.equal(landscapeAngle(-90), 270);
-  for (const angle of [0, 180, undefined, NaN]) assert.equal(landscapeAngle(angle), undefined);
+test("both portrait sides keep screen directions consistent", () => {
+  for (const angle of [0, 180] as const) {
+    const sign = angle === 0 ? 1 : -1;
+    const right = motionTarget({ beta: neutral.beta, gamma: neutral.gamma + sign * 30 }, neutral, angle);
+    const up = motionTarget({ beta: neutral.beta - sign * 30, gamma: neutral.gamma }, neutral, angle);
+    near(right.x, 1); near(right.y, 0);
+    near(up.x, 0); near(up.y, 1);
+  }
+});
+test("portrait uses shortest beta difference across wrap", () => {
+  assert.deepEqual(motionTarget({ beta: -179, gamma: 0 }, { beta: 179, gamma: 0 }, 0), { x: 0, y: 0 });
+});
+test("each screen angle is the previous one's mapping rotated a quarter turn", () => {
+  // Rotating the screen 90° counterclockwise maps screen vector (x, y) to (-y, x) for the same physical tilt.
+  const pose = { beta: neutral.beta + 12, gamma: neutral.gamma + 7 };
+  for (const [from, to] of [[0, 90], [90, 180], [180, 270], [270, 0]] as const) {
+    const a = motionTarget(pose, neutral, from);
+    const b = motionTarget(pose, neutral, to);
+    near(b.x, -a.y); near(b.y, a.x);
+  }
+});
+test("screen angles support portrait and both landscape sides, including Safari negative angles", () => {
+  for (const angle of [0, 90, 180, 270] as const) assert.equal(screenAngle(angle), angle);
+  assert.equal(screenAngle(-90), 270);
+  assert.equal(screenAngle(360), 0);
+  for (const angle of [45, undefined, NaN, Infinity]) assert.equal(screenAngle(angle), undefined);
 });

@@ -3,7 +3,7 @@ import type { Vector } from "../../shared/protocol";
 import { BALL_RADIUS, CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS } from "./dimensions";
 import { cellCenter, wallRects, type Maze } from "./maze";
 
-const MAX_TILT = 0.2; // radians at a full-strength tilt
+const MAX_TILT = 0.35; // radians (~20°) at a full-strength tilt; visual only, ball speed is set in physics.ts
 const CAMERA_ANGLE = 0.55; // radians from straight overhead, looking north
 
 /**
@@ -59,12 +59,14 @@ export function createMazeView(canvas: HTMLCanvasElement) {
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.clearViewOffset();
-    // Board corners, raised and lowered by the most a full tilt can move them, so tilting never clips.
+    // Board corners under every extreme tilt (including both axes at once, e.g. a (1, 1) team vector),
+    // so the framing never clips however the team tilts.
     const halfWidth = (maze.cols * CELL_SIZE + WALL_THICKNESS) / 2;
     const halfDepth = (maze.rows * CELL_SIZE + WALL_THICKNESS) / 2;
-    const lift = Math.sin(MAX_TILT) * Math.max(halfWidth, halfDepth);
-    const corners = [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) =>
-      [-lift, WALL_HEIGHT + lift].map((y) => new THREE.Vector3(sx * halfWidth, y, sz * halfDepth))));
+    const extremes = [-1, 0, 1].flatMap((x) => [-1, 0, 1].map((y) =>
+      new THREE.Euler(-y * MAX_TILT, 0, -x * MAX_TILT))); // same mapping as setTilt
+    const corners = extremes.flatMap((rotation) => [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) =>
+      [-WALL_THICKNESS, WALL_HEIGHT].map((y) => new THREE.Vector3(sx * halfWidth, y, sz * halfDepth).applyEuler(rotation)))));
     // Perspective makes the near edge widest, so binary-search the closest distance that still fits.
     const extentAt = (distance: number) => {
       camera.position.set(0, distance * Math.cos(CAMERA_ANGLE), distance * Math.sin(CAMERA_ANGLE));
