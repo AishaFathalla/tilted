@@ -203,3 +203,96 @@ Use the Mac’s current IPv6 address in brackets:
 `http://[<Mac-IPv6-address>]:5173/apps/controller/index.html`.
 The address may change when reconnecting. On the laptop the host remains at
 `http://localhost:5173/apps/host/index.html`.
+
+## Milestone 2 — Phone Motion
+
+Phone motion is the default input mode; **Slider fallback** is an explicit option.
+Join, tap **Enable motion**, hold a comfortable neutral pose in landscape,
+and tap **Calibrate**. Recalibration immediately sends zero and resets smoothing.
+Switching input modes also resets both sliders and the outgoing vector; returning
+to motion requires enabling and calibrating again.
+
+Motion uses `DeviceOrientationEvent` and the screen orientation angle. Both
+landscape sides are supported on portrait-natural phones. At screen angle 90°
+(phone top on the left), `x = shortestAngle(beta - beta₀) / 30` and
+`y = (gamma - gamma₀) / 30`. At 270° (phone top on the right), both signs reverse.
+This swaps the previous portrait axes and keeps directions relative to the screen.
+Enable screen auto-rotation; unknown screen angles pause motion instead of guessing.
+A radial clamp bounds magnitude to 1,
+a radial dead zone of 0.08 rescales the remaining range, and exponential smoothing
+uses a factor of 0.2 per sensor sample. Tiny residuals snap to zero. All tuning
+constants are in `apps/controller/motion.ts`. This supports ordinary tilts around
+a comfortable neutral pose; inverted poses are outside this milestone.
+
+Rotating to portrait or flipping landscape sides pauses at zero and invalidates calibration.
+Return to landscape and calibrate again. Backgrounding the page, invalid readings,
+or two seconds without readings also pauses at zero and requires recalibration.
+Permission denial and unavailable sensors show instructions to use sliders.
+
+### Trusted HTTPS for phone testing
+
+The simplest setup for the current two-process development deployment is a
+Cloudflare Quick Tunnel (the `cloudflared` binary is installed on this Mac).
+Run the room server, Vite, and tunnel in three terminals:
+
+```bash
+npm run dev:server
+```
+
+```bash
+npm run dev:web
+```
+
+```bash
+cloudflared tunnel --url http://localhost:5173
+```
+
+Open the printed `https://<random>.trycloudflare.com/apps/host/` on the laptop
+and `https://<random>.trycloudflare.com/apps/controller/` on phones.
+Cloudflare supplies a publicly trusted TLS certificate. The controller connects
+to `wss://<random>.trycloudflare.com/ws`; the tunnel forwards to Vite, whose
+existing `/ws` proxy forwards to `ws://127.0.0.1:8080/ws`. No separate tunnel or
+TLS certificate is needed for the room server. The temporary URL changes when
+the tunnel restarts. Stop the tunnel when testing ends.
+
+If Vite rejects the tunnel hostname, restart Vite with that exact hostname:
+
+```bash
+__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=<random>.trycloudflare.com npm run dev:web
+```
+
+Plain HTTP LAN URLs still work for sliders, but cannot be used for phone motion.
+Quick Tunnel documentation: https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/
+
+### Required real-phone acceptance test
+
+The user reported the original portrait test successful (device/browser not
+specified). The new landscape mapping requires another physical check on both
+landscape sides. Complete these steps in iPhone Safari and Android Chrome.
+
+1. Create a room over HTTPS and join. On iPhone, tap **Enable motion** and allow
+   the prompt. Android may attach sensors without a prompt. Calibrate in landscape.
+2. In each landscape position, lower the screen’s right edge: controller and host must show positive X. Lower the
+   screen’s left edge: negative X. Lower the screen’s top edge away from you: positive Y. Lift
+   the screen’s top edge toward you: negative Y. Record phone, browser, and each sign.
+3. Hold neutral: output settles to exactly zero. Small tilts stay zero; roughly
+   30° reaches full strength after smoothing. Diagonal magnitude stays ≤ 1.
+4. Recalibrate in a different comfortable pose: output immediately becomes zero.
+5. Tilt, switch to sliders: host immediately sees zero. Move sliders; switch
+   back to motion: zero again until enabling and calibrating.
+6. While tilted, rotate to portrait: host immediately sees zero. Return to
+   landscape: output stays zero until fresh readings and explicit calibration.
+   Flip landscape sides and confirm another calibration is required.
+   Also check background/foreground and sensor loss.
+7. Deny permission in a fresh browser session: helpful feedback appears and
+   sliders still work. Retry after allowing sensor access in browser settings.
+8. Join from two phones: aligned tilts reinforce; opposing tilts cancel.
+
+| Device/browser | Landscape screen right edge down → +X | Landscape screen top edge down/away → +Y | Status |
+| --- | --- | --- | --- |
+| iPhone / Safari | Pending | Pending | Landscape retest pending |
+| Android / Chrome | Pending | Pending | Landscape retest pending |
+
+Local verification: `npm run typecheck`, `npm run build`, and
+`node --import tsx --test tests/motion.test.ts`. Automated tests verify the angle transform,
+clamp, dead zone, wrap handling, both landscape mappings, and smoothing, not physical sensor signs.
