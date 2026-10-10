@@ -1,6 +1,6 @@
 import type { ServerMessage, Vector } from "../../shared/protocol";
 
-import { MOTION, landscapeAngle, motionTarget, smoothVector, type LandscapeAngle, type Pose } from "./motion";
+import { MOTION, motionTarget, screenAngle, smoothVector, type Pose, type ScreenAngle } from "./motion";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
 const form = document.querySelector<HTMLFormElement>("#join")!;
@@ -22,7 +22,7 @@ let listening = false;
 let enabling = false;
 let latest: Pose | undefined;
 let neutral: Pose | undefined;
-let calibratedAngle: LandscapeAngle | undefined;
+let calibratedAngle: ScreenAngle | undefined;
 let smoothed: Vector = { x: 0, y: 0 };
 let sensorTimer: ReturnType<typeof setTimeout> | undefined;
 let permissionGeneration = 0;
@@ -40,20 +40,17 @@ function resetVector() {
   x.value = y.value = "0";
   sendVector(smoothed);
 }
-function currentLandscapeAngle() {
+function currentScreenAngle() {
   // Physical screen orientation, not viewport aspect ratio (keyboard).
-  if (screen.orientation) {
-    if (!screen.orientation.type.startsWith("landscape")) return undefined;
-    return landscapeAngle(screen.orientation.angle);
-  }
-  return landscapeAngle((window as Window & { orientation?: number }).orientation);
+  if (screen.orientation) return screenAngle(screen.orientation.angle);
+  return screenAngle((window as Window & { orientation?: number }).orientation);
 }
 function updateMotionUI() {
   const active = mode.value === "motion";
   sliders.hidden = active;
   enable.hidden = calibrate.hidden = !active;
   enable.disabled = listening || enabling;
-  calibrate.disabled = !listening || !latest || currentLandscapeAngle() === undefined || document.hidden;
+  calibrate.disabled = !listening || !latest || currentScreenAngle() === undefined || document.hidden;
 }
 function pauseMotion(message: string) {
   latest = undefined;
@@ -71,9 +68,9 @@ function armSensorTimeout() {
 }
 function onOrientation(event: DeviceOrientationEvent) {
   if (mode.value !== "motion" || !joined || roomClosed || document.hidden) return;
-  const angle = currentLandscapeAngle();
+  const angle = currentScreenAngle();
   if (angle === undefined) {
-    pauseMotion("Motion paused. Return to landscape and recalibrate.");
+    pauseMotion("Motion paused: unknown screen orientation. Hold the phone steady and recalibrate.");
     return;
   }
   if (event.beta === null || event.gamma === null || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) {
@@ -81,13 +78,13 @@ function onOrientation(event: DeviceOrientationEvent) {
     return;
   }
   if (neutral && angle !== calibratedAngle) {
-    pauseMotion("Landscape side changed. Hold your phone sideways and recalibrate.");
+    pauseMotion("Screen rotated. Hold your phone steady and recalibrate.");
   }
   armSensorTimeout();
   latest = { beta: event.beta, gamma: event.gamma };
   updateMotionUI();
   if (!neutral) {
-    motionStatus.textContent = "Hold a comfortable neutral pose in landscape, then tap Calibrate.";
+    motionStatus.textContent = "Hold a comfortable neutral pose, then tap Calibrate.";
     return;
   }
   smoothed = smoothVector(smoothed, motionTarget(latest, neutral, angle));
@@ -104,7 +101,7 @@ function stopMotion() {
 mode.onchange = () => {
   stopMotion();
   resetVector();
-  motionStatus.textContent = mode.value === "motion" ? "Tap Enable motion, then calibrate in landscape." : "Slider fallback active.";
+  motionStatus.textContent = mode.value === "motion" ? "Tap Enable motion, then calibrate." : "Slider fallback active.";
   updateMotionUI();
 };
 x.oninput = y.oninput = () => {
@@ -133,7 +130,7 @@ enable.onclick = async () => {
     }
     listening = true;
     window.addEventListener("deviceorientation", onOrientation);
-    motionStatus.textContent = currentLandscapeAngle() !== undefined ? "Waiting for motion readings…" : "Return to landscape and recalibrate.";
+    motionStatus.textContent = currentScreenAngle() !== undefined ? "Waiting for motion readings…" : "Unknown screen orientation. Hold the phone steady and recalibrate.";
     armSensorTimeout();
   } catch {
     if (generation === permissionGeneration) motionStatus.textContent = "Could not enable motion. Check browser permissions or use sliders.";
@@ -142,21 +139,21 @@ enable.onclick = async () => {
   }
 };
 calibrate.onclick = () => {
-  if (!latest || currentLandscapeAngle() === undefined || document.hidden) return;
+  if (!latest || currentScreenAngle() === undefined || document.hidden) return;
   resetVector();
   neutral = { ...latest };
-  calibratedAngle = currentLandscapeAngle();
+  calibratedAngle = currentScreenAngle();
   motionStatus.textContent = "Calibrated. Screen’s right edge down = +X; screen’s top edge down/away = +Y.";
 };
 function orientationChanged() {
-  if (mode.value === "motion") pauseMotion("Motion paused. Return to landscape and recalibrate.");
+  if (mode.value === "motion") pauseMotion("Screen rotated. Hold your phone steady and recalibrate.");
 }
 screen.orientation?.addEventListener("change", orientationChanged);
 window.addEventListener("orientationchange", orientationChanged);
 document.addEventListener("visibilitychange", () => {
   if (mode.value === "motion") {
     clearTimeout(sensorTimer);
-    pauseMotion("Motion paused. Return to landscape and recalibrate.");
+    pauseMotion("Motion paused while the page was hidden. Recalibrate to resume.");
     if (!document.hidden && listening) armSensorTimeout();
   }
 });

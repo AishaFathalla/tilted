@@ -1,20 +1,15 @@
 import * as THREE from "three";
 import type { Vector } from "../../shared/protocol";
+import { BALL_RADIUS, CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS } from "./dimensions";
 import { cellCenter, wallRects, type Maze } from "./maze";
 
-// World units; physics should reuse these so drawn walls match collision walls.
-export const CELL_SIZE = 40;
-export const WALL_THICKNESS = 6;
-export const WALL_HEIGHT = 18;
-export const BALL_RADIUS = CELL_SIZE * 0.3;
-
-const MAX_TILT = 0.2; // radians at a full-strength team vector
-const TILT_EASING = 0.15; // fraction of the remaining tilt applied per frame
+const MAX_TILT = 0.35; // radians (~20°) at a full-strength tilt; visual only, ball speed is set in physics.ts
 const CAMERA_ANGLE = 0.55; // radians from straight overhead, looking north
 
 /**
  * 3D view of a maze on a tilting board. Maze world coordinates (x right, y down) map to the board's
  * x and z, with Three.js y as height. The canvas's CSS decides its size; the view follows resizes.
+ * Draws only when render() is called, so the game loop controls timing.
  */
 export function createMazeView(canvas: HTMLCanvasElement) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -52,7 +47,6 @@ export function createMazeView(canvas: HTMLCanvasElement) {
   board.add(floor, walls, goal, ball);
 
   let maze: Maze | undefined;
-  const target = { x: 0, y: 0 };
   // Converts maze world coordinates to board-local coordinates.
   const toBoard = (x: number, y: number) =>
     maze ? { x: x - (maze.cols * CELL_SIZE) / 2, z: y - (maze.rows * CELL_SIZE) / 2 } : { x: 0, z: 0 };
@@ -65,12 +59,14 @@ export function createMazeView(canvas: HTMLCanvasElement) {
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.clearViewOffset();
-    // Board corners, raised and lowered by the most a full tilt can move them, so tilting never clips.
+    // Board corners under every extreme tilt (including both axes at once, e.g. a (1, 1) team vector),
+    // so the framing never clips however the team tilts.
     const halfWidth = (maze.cols * CELL_SIZE + WALL_THICKNESS) / 2;
     const halfDepth = (maze.rows * CELL_SIZE + WALL_THICKNESS) / 2;
-    const lift = Math.sin(MAX_TILT) * Math.max(halfWidth, halfDepth);
-    const corners = [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) =>
-      [-lift, WALL_HEIGHT + lift].map((y) => new THREE.Vector3(sx * halfWidth, y, sz * halfDepth))));
+    const extremes = [-1, 0, 1].flatMap((x) => [-1, 0, 1].map((y) =>
+      new THREE.Euler(-y * MAX_TILT, 0, -x * MAX_TILT))); // same mapping as setTilt
+    const corners = extremes.flatMap((rotation) => [-1, 1].flatMap((sx) => [-1, 1].flatMap((sz) =>
+      [-WALL_THICKNESS, WALL_HEIGHT].map((y) => new THREE.Vector3(sx * halfWidth, y, sz * halfDepth).applyEuler(rotation)))));
     // Perspective makes the near edge widest, so binary-search the closest distance that still fits.
     const extentAt = (distance: number) => {
       camera.position.set(0, distance * Math.cos(CAMERA_ANGLE), distance * Math.sin(CAMERA_ANGLE));
@@ -96,13 +92,6 @@ export function createMazeView(canvas: HTMLCanvasElement) {
     camera.setViewOffset(width, height, 0, (-centerY * height) / 2, width, height);
   }
   new ResizeObserver(fitCamera).observe(canvas);
-
-  renderer.setAnimationLoop(() => {
-    // Positive control x lowers the east edge; positive control y lowers the north (-z) edge.
-    board.rotation.z += (-target.x * MAX_TILT - board.rotation.z) * TILT_EASING;
-    board.rotation.x += (-target.y * MAX_TILT - board.rotation.x) * TILT_EASING;
-    renderer.render(scene, camera);
-  });
 
   return {
     setMaze(next: Maze) {
@@ -140,10 +129,13 @@ export function createMazeView(canvas: HTMLCanvasElement) {
       const { x: boardX, z } = toBoard(x, y);
       ball.position.set(boardX, BALL_RADIUS, z);
     },
-    /** Team vector, components in [-1, 1]; the board eases toward the matching tilt. */
-    setTilt(vector: Vector) {
-      target.x = vector.x;
-      target.y = vector.y;
+    /** Board tilt, components in [-1, 1]. Positive x lowers the east edge; positive y lowers the north (-z) edge. */
+    setTilt(tilt: Vector) {
+      board.rotation.z = -tilt.x * MAX_TILT;
+      board.rotation.x = -tilt.y * MAX_TILT;
+    },
+    render() {
+      renderer.render(scene, camera);
     },
   };
 }

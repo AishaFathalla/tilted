@@ -207,25 +207,32 @@ The address may change when reconnecting. On the laptop the host remains at
 ## Milestone 2 — Phone Motion
 
 Phone motion is the default input mode; **Slider fallback** is an explicit option.
-Join, tap **Enable motion**, hold a comfortable neutral pose in landscape,
-and tap **Calibrate**. Recalibration immediately sends zero and resets smoothing.
+Join, tap **Enable motion**, hold a comfortable neutral pose in portrait or
+landscape, and tap **Calibrate**. Recalibration immediately sends zero and resets smoothing.
 Switching input modes also resets both sliders and the outgoing vector; returning
 to motion requires enabling and calibrating again.
 
-Motion uses `DeviceOrientationEvent` and the screen orientation angle. Both
-landscape sides are supported on portrait-natural phones. At screen angle 90°
-(phone top on the left), `x = shortestAngle(beta - beta₀) / 30` and
-`y = (gamma - gamma₀) / 30`. At 270° (phone top on the right), both signs reverse.
-This swaps the previous portrait axes and keeps directions relative to the screen.
-Enable screen auto-rotation; unknown screen angles pause motion instead of guessing.
+Motion uses `DeviceOrientationEvent` and the screen orientation angle. Portrait
+and both landscape sides are supported on portrait-natural phones, with directions
+always relative to the screen. In portrait (screen angle 0°),
+`x = (gamma - gamma₀) / 30` and `y = -shortestAngle(beta - beta₀) / 30`.
+At 90° (phone top on the left), `x = shortestAngle(beta - beta₀) / 30` and
+`y = (gamma - gamma₀) / 30`. At 180° and 270° (phone top on the right), the 0° and
+90° signs reverse. Each mapping is the portrait one rotated by the screen angle.
+Unknown screen angles pause motion instead of guessing.
+
+On iPhone, which can only lock rotation in portrait, the most stable setup is
+**Portrait Orientation Lock on** and playing in portrait: the screen can't rotate
+mid-game, so hard tilts never pause motion. With rotation unlocked, landscape
+works too.
 A radial clamp bounds magnitude to 1,
 a radial dead zone of 0.08 rescales the remaining range, and exponential smoothing
 uses a factor of 0.2 per sensor sample. Tiny residuals snap to zero. All tuning
 constants are in `apps/controller/motion.ts`. This supports ordinary tilts around
 a comfortable neutral pose; inverted poses are outside this milestone.
 
-Rotating to portrait or flipping landscape sides pauses at zero and invalidates calibration.
-Return to landscape and calibrate again. Backgrounding the page, invalid readings,
+Any screen rotation (portrait ↔ landscape, or flipping sides) pauses at zero and
+invalidates calibration; calibrate again in the new orientation. Backgrounding the page, invalid readings,
 or two seconds without readings also pauses at zero and requires recalibration.
 Permission denial and unavailable sensors show instructions to use sliders.
 
@@ -255,11 +262,8 @@ existing `/ws` proxy forwards to `ws://127.0.0.1:8080/ws`. No separate tunnel or
 TLS certificate is needed for the room server. The temporary URL changes when
 the tunnel restarts. Stop the tunnel when testing ends.
 
-If Vite rejects the tunnel hostname, restart Vite with that exact hostname:
-
-```bash
-__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS=<random>.trycloudflare.com npm run dev:web
-```
+`vite.config.ts` allows any `.trycloudflare.com` hostname, so a new tunnel URL
+works without restarting Vite or editing the config.
 
 Plain HTTP LAN URLs still work for sliders, but cannot be used for phone motion.
 Quick Tunnel documentation: https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/
@@ -267,12 +271,12 @@ Quick Tunnel documentation: https://developers.cloudflare.com/tunnel/get-started
 ### Required real-phone acceptance test
 
 The user reported the original portrait test successful (device/browser not
-specified). The new landscape mapping requires another physical check on both
-landscape sides. Complete these steps in iPhone Safari and Android Chrome.
+specified). The current mappings (portrait and both landscape sides) require another
+physical check. Complete these steps in iPhone Safari and Android Chrome.
 
 1. Create a room over HTTPS and join. On iPhone, tap **Enable motion** and allow
-   the prompt. Android may attach sensors without a prompt. Calibrate in landscape.
-2. In each landscape position, lower the screen’s right edge: controller and host must show positive X. Lower the
+   the prompt. Android may attach sensors without a prompt. Calibrate.
+2. In portrait and in each landscape position, lower the screen’s right edge: controller and host must show positive X. Lower the
    screen’s left edge: negative X. Lower the screen’s top edge away from you: positive Y. Lift
    the screen’s top edge toward you: negative Y. Record phone, browser, and each sign.
 3. Hold neutral: output settles to exactly zero. Small tilts stay zero; roughly
@@ -280,19 +284,23 @@ landscape sides. Complete these steps in iPhone Safari and Android Chrome.
 4. Recalibrate in a different comfortable pose: output immediately becomes zero.
 5. Tilt, switch to sliders: host immediately sees zero. Move sliders; switch
    back to motion: zero again until enabling and calibrating.
-6. While tilted, rotate to portrait: host immediately sees zero. Return to
-   landscape: output stays zero until fresh readings and explicit calibration.
-   Flip landscape sides and confirm another calibration is required.
+6. While tilted, rotate the screen (portrait ↔ landscape): host immediately sees zero
+   and output stays zero until fresh readings and explicit calibration. Flip
+   landscape sides and confirm another calibration is required. With iPhone
+   Portrait Orientation Lock on, confirm hard tilts in portrait never pause.
    Also check background/foreground and sensor loss.
 7. Deny permission in a fresh browser session: helpful feedback appears and
    sliders still work. Retry after allowing sensor access in browser settings.
 8. Join from two phones: aligned tilts reinforce; opposing tilts cancel.
 
-| Device/browser | Landscape screen right edge down → +X | Landscape screen top edge down/away → +Y | Status |
+| Device/browser | Screen right edge down → +X | Screen top edge down/away → +Y | Status |
 | --- | --- | --- | --- |
-| iPhone / Safari | Pending | Pending | Landscape retest pending |
-| Android / Chrome | Pending | Pending | Landscape retest pending |
+| iPhone / Safari (portrait) | Pending | Pending | Portrait retest pending |
+| iPhone / Safari (landscape) | Pending | Pending | Landscape retest pending |
+| Android / Chrome (portrait) | Pending | Pending | Portrait retest pending |
+| Android / Chrome (landscape) | Pending | Pending | Landscape retest pending |
 
 Local verification: `npm run typecheck`, `npm run build`, and
 `node --import tsx --test tests/motion.test.ts`. Automated tests verify the angle transform,
-clamp, dead zone, wrap handling, both landscape mappings, and smoothing, not physical sensor signs.
+clamp, dead zone, wrap handling, all four screen-angle mappings (and that each is the previous one rotated
+a quarter turn), and smoothing, not physical sensor signs.
