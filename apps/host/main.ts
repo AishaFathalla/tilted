@@ -1,4 +1,6 @@
 import type { ServerMessage, Vector } from "../../shared/protocol";
+import { drawMaze } from "./draw";
+import { generateMaze } from "./maze";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
 const create = document.querySelector<HTMLButtonElement>("#create")!;
@@ -39,6 +41,16 @@ function render() {
   drawArrow(meanArrow, value);
 }
 render();
+const mazeCanvas = document.querySelector<HTMLCanvasElement>("#maze")!;
+const mazeSeed = document.querySelector<HTMLSpanElement>("#maze-seed")!;
+const newMaze = document.querySelector<HTMLButtonElement>("#new-maze")!;
+function showNewMaze() {
+  const maze = generateMaze(12, 8, Math.floor(Math.random() * 2 ** 32));
+  mazeSeed.textContent = String(maze.seed);
+  drawMaze(mazeCanvas, maze);
+}
+newMaze.onclick = showNewMaze;
+showNewMaze();
 const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
 let created = false;
 socket.onopen = () => { status.textContent = "Connected. Create a room."; create.disabled = false; };
