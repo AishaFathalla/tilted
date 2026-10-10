@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tiltocracy Host</title></head>
+<body>
+  <h1>Tiltocracy Host</h1>
+  <p id="status">Connecting…</p>
+  <button id="create" disabled>Create room</button>
+  <p id="room"></p>
+  <h2>Players (<span id="count">0</span>)</h2>
+  <ul id="players"></ul>
+  <h2>Arithmetic mean</h2>
+  <p id="mean">(0.00, 0.00)</p>
+  <svg id="mean-arrow" viewBox="-110 -110 220 220" width="180" height="180" aria-label="Mean vector"></svg>
+  <p>Positive X = right. Positive Y = up. Neutral players count in the mean.</p>
+  <script type="module" src="./main.ts"></script>
+</body>
+</html>
