@@ -35,8 +35,8 @@ server.on("connection", (socket) => {
     }
     if (message.type === "recalibrate") {
       if (!room || role !== "controller" || !room.players.has(socket)) return reject("Join a room before recalibrating.");
-      for (const player of room.players.values()) player.ready = false;
-      send(room.host, { type: "round_restart" });
+      // Calibration is local to the phone. Its controller sends a zero vector
+      // while choosing a new neutral pose; keep the active round and readiness.
       sendPlayers();
       return;
     }

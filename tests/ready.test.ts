@@ -34,6 +34,7 @@ test("readiness is shared, validated, reset by the host, and updated on departur
     await new Promise<void>((resolve, reject) => { socket.once("open", resolve); socket.once("error", reject); });
     return {
       socket,
+      hasMessage(type: ServerMessage["type"]) { return messages.some((message) => message.type === type); },
       send(message: object) { socket.send(JSON.stringify(message)); },
       async next<T extends ServerMessage["type"]>(type: T): Promise<Extract<ServerMessage, { type: T }>> {
         const timeout = setTimeout(() => notify?.(), 3000);
@@ -74,13 +75,13 @@ test("readiness is shared, validated, reset by the host, and updated on departur
   assert.ok((await host.next("players")).players.every((p) => p.ready));
   await first.next("players"); await second.next("players");
   first.send({ type: "recalibrate" });
-  await host.next("round_restart");
-  assert.ok((await host.next("players")).players.every((p) => !p.ready));
+  assert.ok((await host.next("players")).players.every((p) => p.ready));
+  assert.equal(host.hasMessage("round_restart"), false);
   await first.next("players"); await second.next("players");
   first.send({ type: "ready", ready: true });
   await host.next("players"); await first.next("players"); await second.next("players");
   first.send({ type: "ready", ready: false });
-  assert.deepEqual((await host.next("players")).players.map((p) => p.ready), [false, false]);
+  assert.deepEqual((await host.next("players")).players.map((p) => p.ready), [false, true]);
   await first.next("players"); await second.next("players");
   host.send({ type: "reset_ready" });
   await host.next("ready_reset");
