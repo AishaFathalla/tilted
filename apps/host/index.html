@@ -1,13 +1,16 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tiltocracy Host</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tilted Host</title><link rel="stylesheet" href="./style.css"></head>
 <body>
-  <h1>Tiltocracy Host</h1>
+  <h1>Tilted Host</h1>
   <p id="status">Connecting…</p>
   <button id="create" disabled>Create room</button>
   <p id="room"></p>
-  <h2>Players (<span id="count">0</span>)</h2>
-  <ul id="players"></ul>
+  <section class="player-menu" aria-labelledby="players-heading">
+    <h2 id="players-heading">Players <span id="count">0</span></h2>
+    <p id="no-players">No players yet. Share the room code to join.</p>
+    <ul id="players" aria-label="Players in this room"></ul>
+  </section>
   <h2>Arithmetic mean</h2>
   <p id="mean">(0.00, 0.00)</p>
   <svg id="mean-arrow" viewBox="-110 -110 220 220" width="180" height="180" aria-label="Mean vector"></svg>

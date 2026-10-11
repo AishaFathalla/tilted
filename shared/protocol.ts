@@ -1,6 +1,6 @@
 export type Vector = { x: number; y: number };
 
-export type Player = { id: string; name: string };
+export type Player = { id: string; name: string; color: string };
 
 export type ClientMessage =
   | { type: "create" }
@@ -8,6 +8,7 @@ export type ClientMessage =
   | ({ type: "vec"; seq: number } & Vector);
 
 export type ServerMessage =
+  | { type: "players"; players: Player[] }
   | { type: "created"; room: string }
   | { type: "joined"; room: string; playerId: string }
   | { type: "player_joined"; player: Player }
