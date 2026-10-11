@@ -1,4 +1,6 @@
 import type { ServerMessage, Vector } from "../../shared/protocol";
+import { createGame } from "./game";
+import { generateMaze } from "./maze";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
 const create = document.querySelector<HTMLButtonElement>("#create")!;
@@ -56,7 +58,22 @@ function render() {
   emptyList.hidden = players.size > 0;
   mean.textContent = `(${value.x.toFixed(2)}, ${value.y.toFixed(2)})`;
   drawArrow(meanArrow, value);
+  game.setTeamVector(value);
 }
+const mazeSeed = document.querySelector<HTMLSpanElement>("#maze-seed")!;
+const mazeStatus = document.querySelector<HTMLParagraphElement>("#maze-status")!;
+const newMaze = document.querySelector<HTMLButtonElement>("#new-maze")!;
+const game = createGame(document.querySelector<HTMLCanvasElement>("#maze")!, (seconds) => {
+  mazeStatus.textContent = `Goal reached in ${seconds.toFixed(1)} s!`;
+});
+function showNewMaze() {
+  const maze = generateMaze(12, 8, Math.floor(Math.random() * 2 ** 32));
+  mazeSeed.textContent = String(maze.seed);
+  mazeStatus.textContent = "Tilt together to roll the ball to the green goal.";
+  game.setMaze(maze);
+}
+newMaze.onclick = showNewMaze;
+showNewMaze();
 render();
 const socket = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
 let created = false;
