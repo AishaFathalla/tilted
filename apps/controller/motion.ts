@@ -1,7 +1,7 @@
 import type { Vector } from "../../shared/protocol";
 
 export const MOTION = {
-  fullScaleDegrees: 30,
+  fullScaleDegrees: 20,
   deadZone: 0.08,
   smoothing: 0.2,
   zeroSnap: 0.001,

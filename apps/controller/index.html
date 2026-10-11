@@ -29,11 +29,10 @@
   <fieldset id="controls" hidden disabled>
     <legend>Controller input</legend>
     <p><label>Input mode <select id="mode"><option value="motion">Phone motion</option><option value="sliders">Slider fallback</option></select></label></p>
-    <p>Hold your phone sideways (landscape) or upright (portrait), then calibrate. Tip: on iPhone, turn on Portrait Orientation Lock and play in portrait so the screen can't rotate mid-game.</p>
-    <p id="motion-status" role="status">Tap Enable motion, then calibrate.</p>
+    <p id="motion-status" role="status">Hold steady and enable motion.</p>
     <button id="enable-motion" type="button">Enable motion</button>
     <button id="calibrate" type="button" disabled>Calibrate</button>
-    <p>Positive X = right. Positive Y = up. Each component ranges from -1 to 1.</p>
+    <p><button id="ready" type="button" aria-pressed="false">Ready</button></p>
     <div id="sliders" hidden>
     <p><label>X <input id="x" type="range" min="-1" max="1" step="0.01" value="0" style="width: 70vw; max-width: 400px"></label></p>
     <p><label>Y <input id="y" type="range" min="-1" max="1" step="0.01" value="0" style="width: 70vw; max-width: 400px"></label></p>

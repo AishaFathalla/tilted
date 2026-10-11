@@ -1,5 +1,6 @@
 import type { Player, ServerMessage, Vector } from "../../shared/protocol";
 import { mountMotionControls } from "../controller/controls";
+import { mountReadyButton } from "../controller/ready";
 import type { Maze } from "../host/maze";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
@@ -30,7 +31,10 @@ let roster: Player[] = [];
 const gamePanel = document.querySelector<HTMLElement>("#game-panel")!;
 const mazeStatus = document.querySelector<HTMLParagraphElement>("#maze-status")!;
 const mazeSeed = document.querySelector<HTMLSpanElement>("#maze-seed")!;
+const mazeStage = document.querySelector<HTMLDivElement>("#maze-stage")!;
+const mazeLock = document.querySelector<HTMLDivElement>("#maze-lock")!;
 const newMaze = document.querySelector<HTMLButtonElement>("#new-maze")!;
+const restartMaze = document.querySelector<HTMLButtonElement>("#restart-maze")!;
 const timer = document.querySelector<HTMLOutputElement>("#timer")!;
 const resultDialog = document.querySelector<HTMLDialogElement>("#round-result")!;
 const resultTitle = document.querySelector<HTMLHeadingElement>("#result-title")!;
@@ -38,8 +42,12 @@ const resultMessage = document.querySelector<HTMLParagraphElement>("#result-mess
 const restartRound = document.querySelector<HTMLButtonElement>("#restart-round")!;
 const nextRound = document.querySelector<HTMLButtonElement>("#next-round")!;
 const exitRound = document.querySelector<HTMLButtonElement>("#exit-round")!;
-const ROUND_SECONDS = 120;
+const ROUND_SECONDS = 180;
 let currentMaze: Maze | undefined;
+let resettingReady = false;
+let roundStarted = false;
+let restartCurrentMaze: (() => void) | undefined;
+const readyButton = mountReadyButton(socket, () => playerId);
 resultDialog.oncancel = (event) => event.preventDefault();
 function showResult(won: boolean, seconds?: number) {
   resultTitle.textContent = won ? "You won!" : "Time's up!";
@@ -49,7 +57,9 @@ function showResult(won: boolean, seconds?: number) {
 }
 let game: ReturnType<typeof import("../host/game").createGame> | undefined;
 let latestMean: Vector = { x: 0, y: 0 };
-const motion = mountMotionControls(sendVector, () => role === "player" && !closedRoom && socket.readyState === WebSocket.OPEN);
+const motion = mountMotionControls(sendVector, () => role === "player" && !closedRoom && socket.readyState === WebSocket.OPEN,
+  () => { readyButton.setAllowed(true); readyButton.setReady(true); },
+  () => readyButton.recalibrate());
 
 async function startGame() {
   gamePanel.hidden = false;
@@ -62,29 +72,45 @@ async function startGame() {
       showResult(true, seconds);
     }, {
       durationSeconds: ROUND_SECONDS,
+      requireReady: true,
       onLost: () => showResult(false),
       onTick: (remaining, started) => {
+        if (started && !roundStarted) {
+          roundStarted = true;
+          mazeStage.classList.remove("waiting");
+          mazeLock.hidden = true;
+          mazeStatus.textContent = "Reach the green goal in 3 minutes!";
+        }
         const seconds = Math.ceil(remaining);
         timer.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-        timer.classList.toggle("urgent", started && seconds <= 15);
+        timer.classList.toggle("urgent", started && seconds <= 10);
       },
     });
-    const showMaze = (restart = false) => {
+    const showMaze = (restart = false, initial = false) => {
       if (socket.readyState !== WebSocket.OPEN) return;
       if (resultDialog.open) resultDialog.close();
       if (!restart || !currentMaze) currentMaze = generateChallengeMaze(Math.floor(Math.random() * 2 ** 32));
       mazeSeed.textContent = String(currentMaze.seed);
-      mazeStatus.textContent = "Reach the green goal in 2 minutes. Timer starts when your team moves.";
+      roundStarted = false;
+      mazeStage.classList.add("waiting");
+      mazeLock.hidden = false;
+      resettingReady = !initial;
+      if (!initial) socket.send(JSON.stringify({ type: "reset_ready" }));
+      mazeStatus.textContent = "Waiting for players.";
       game!.setMaze(currentMaze);
+      renderPlayers(roster);
     };
     newMaze.onclick = () => showMaze();
+    restartMaze.onclick = () => showMaze(true);
+    restartCurrentMaze = () => showMaze(true, true);
     restartRound.onclick = () => showMaze(true);
     nextRound.onclick = () => showMaze();
     exitRound.onclick = () => back.click();
-    showMaze();
+    showMaze(false, true);
     game.setTeamVector(latestMean);
     updatePlayerVectors();
     newMaze.disabled = false;
+    restartMaze.disabled = false;
   } catch {
     mazeStatus.textContent = "Could not display the maze. Enable WebGL and reload. Players can still test their controls.";
   }
@@ -121,11 +147,21 @@ function renderPlayers(players: Player[]) {
     dot.setAttribute("aria-hidden", "true");
     const label = document.createElement("span");
     label.textContent = player.name + (player.id === playerId ? " (you)" : "");
-    item.append(dot, label);
+    const readiness = document.createElement("span");
+    readiness.className = `player-ready${player.ready ? " is-ready" : ""}`;
+    readiness.textContent = player.ready ? "Ready" : "Not ready";
+    item.append(dot, label, readiness);
     list.append(item);
   }
   count.textContent = String(players.length);
   empty.hidden = players.length > 0;
+  readyButton.update(players);
+  game?.setReady(!resettingReady && players.length > 0 && players.every((player) => player.ready));
+  if (game && !roundStarted && !resettingReady) {
+    mazeStatus.textContent = players.length
+      ? `${players.filter((player) => player.ready).length}/${players.length} ready`
+      : "Waiting for players.";
+  }
   renderMean();
 }
 socket.onopen = () => { status.textContent = "Create a room or enter a code to join."; buttons(false); };
@@ -157,9 +193,8 @@ socket.onmessage = (event) => {
     role = "host";
     back.hidden = false;
     showRoom(message.room);
-    roomNote.textContent = "Share this code with your players. Keep this page open.";
-    status.textContent = "Room open. Waiting for players.";
-    team.hidden = false;
+    roomNote.textContent = "Share this code with friends.";
+    status.textContent = "Room open";
     void startGame();
   } else if (message.type === "joined") {
     role = "player";
@@ -169,12 +204,23 @@ socket.onmessage = (event) => {
     status.textContent = "You're in!";
     controls.hidden = false;
     controls.disabled = false;
+  } else if (message.type === "round_restart") {
+    for (const id of vectors.keys()) vectors.set(id, { x: 0, y: 0 });
+    roster = roster.map((player) => ({ ...player, ready: false }));
+    restartCurrentMaze?.();
+  } else if (message.type === "ready_reset") {
+    resettingReady = false;
   } else if (message.type === "players") {
     renderPlayers(message.players);
   } else if (message.type === "vec") {
     if (vectors.has(message.playerId)) vectors.set(message.playerId, { x: message.x, y: message.y });
     renderMean();
   } else if (message.type === "error") {
+    readyButton.reject();
+    if (message.message === "Unsupported message type.") {
+      status.textContent = "Restart the room server, then refresh all screens.";
+      return;
+    }
     status.textContent = message.message;
     buttons(role !== null);
   } else if (message.type === "room_closed") {
@@ -185,9 +231,9 @@ socket.onmessage = (event) => {
     status.textContent = "Host closed the room. Reload to join another room.";
   }
 };
-function sendVector(value: Vector) {
+function sendVector(value: Vector, showCoordinates = true) {
   if (role !== "player" || closedRoom || socket.readyState !== WebSocket.OPEN) return;
-  vector.textContent = `(${value.x.toFixed(2)}, ${value.y.toFixed(2)})`;
+  if (showCoordinates) vector.textContent = `(${value.x.toFixed(2)}, ${value.y.toFixed(2)})`;
   socket.send(JSON.stringify({ type: "vec", seq: seq++, ...value }));
 }
 socket.onclose = () => {
@@ -197,6 +243,7 @@ socket.onclose = () => {
   game?.setTeamVector({ x: 0, y: 0 });
   game?.setPlayerVectors([]);
   newMaze.disabled = true;
+  restartMaze.disabled = true;
   buttons(true);
   controls.disabled = true;
   if (!closedRoom) status.textContent = "Connection closed. Reload to connect again.";

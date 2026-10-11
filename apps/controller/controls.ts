@@ -1,15 +1,18 @@
 import type { Vector } from "../../shared/protocol";
+import { calibrationFeedback } from "./calibration-feedback";
 import { MOTION, motionTarget, screenAngle, smoothVector, type Pose, type ScreenAngle } from "./motion";
 
 // Reuse the controller's sensor flow on the combined lobby page.
-export function mountMotionControls(sendVector: (value: Vector) => void, isActive: () => boolean) {
+export function mountMotionControls(sendVector: (value: Vector, showCoordinates?: boolean) => void, isActive: () => boolean, onCalibrated: () => void = () => {}, onRecalibrating: () => void = () => {}) {
   const x = document.querySelector<HTMLInputElement>("#x")!;
   const y = document.querySelector<HTMLInputElement>("#y")!;
   const mode = document.querySelector<HTMLSelectElement>("#mode")!;
   const enable = document.querySelector<HTMLButtonElement>("#enable-motion")!;
   const calibrate = document.querySelector<HTMLButtonElement>("#calibrate")!;
+  const coordinates = document.querySelector<HTMLOutputElement>("#vector")!;
   const motionStatus = document.querySelector<HTMLParagraphElement>("#motion-status")!;
   const sliders = document.querySelector<HTMLDivElement>("#sliders")!;
+  const confirmation = calibrationFeedback(calibrate, motionStatus);
   let listening = false;
   let enabling = false;
   let latest: Pose | undefined;
@@ -20,6 +23,7 @@ export function mountMotionControls(sendVector: (value: Vector) => void, isActiv
   let permissionGeneration = 0;
 
   function resetVector() {
+    confirmation.reset();
     neutral = undefined;
     calibratedAngle = undefined;
     smoothed = { x: 0, y: 0 };
@@ -36,9 +40,16 @@ export function mountMotionControls(sendVector: (value: Vector) => void, isActiv
     sliders.hidden = active;
     enable.hidden = calibrate.hidden = !active;
     enable.disabled = listening || enabling;
-    calibrate.disabled = !listening || !latest || currentScreenAngle() === undefined || document.hidden;
+    calibrate.disabled = !neutral && (!listening || !latest || currentScreenAngle() === undefined || document.hidden);
+    calibrate.textContent = neutral ? "Re-calibrate" : "Calibrate";
   }
   function pauseMotion(message: string) {
+    if (neutral) {
+      // Preserve calibration and quietly stop stale input until readings resume.
+      smoothed = { x: 0, y: 0 };
+      sendVector(smoothed, false);
+      return;
+    }
     latest = undefined;
     resetVector();
     motionStatus.textContent = message;
@@ -48,7 +59,7 @@ export function mountMotionControls(sendVector: (value: Vector) => void, isActiv
     clearTimeout(sensorTimer);
     sensorTimer = setTimeout(() => {
       if (mode.value === "motion" && listening) {
-        pauseMotion("No motion readings. Check sensor permissions or use sliders. Recalibrate when readings resume.");
+        pauseMotion("No motion readings. Try sliders.");
       }
     }, MOTION.sensorTimeoutMs);
   }
@@ -65,16 +76,22 @@ export function mountMotionControls(sendVector: (value: Vector) => void, isActiv
     }
     if (neutral && angle !== calibratedAngle) {
       pauseMotion("Screen rotated. Hold your phone steady and recalibrate.");
+      return;
     }
     armSensorTimeout();
     latest = { beta: event.beta, gamma: event.gamma };
     updateMotionUI();
     if (!neutral) {
-      motionStatus.textContent = "Hold a comfortable neutral pose, then tap Calibrate.";
-      return;
+      motionStatus.textContent = "Hold steady, then calibrate.";
     }
-    smoothed = smoothVector(smoothed, motionTarget(latest, neutral, angle));
-    sendVector(smoothed);
+    smoothed = smoothVector(smoothed, motionTarget(latest, neutral ?? { beta: 0, gamma: 0 }, angle));
+    if (neutral) {
+      // Keep the saved zero visible; gameplay still receives live relative tilt.
+      sendVector(smoothed, false);
+    } else {
+      coordinates.textContent = `(${smoothed.x.toFixed(2)}, ${smoothed.y.toFixed(2)})`;
+      sendVector({ x: 0, y: 0 }, false);
+    }
   }
   function stopMotion() {
     permissionGeneration++;
@@ -87,7 +104,7 @@ export function mountMotionControls(sendVector: (value: Vector) => void, isActiv
   mode.onchange = () => {
     stopMotion();
     resetVector();
-    motionStatus.textContent = mode.value === "motion" ? "Tap Enable motion, then calibrate." : "Slider fallback active.";
+    motionStatus.textContent = mode.value === "motion" ? "Enable motion to begin." : "Sliders on.";
     updateMotionUI();
   };
   x.oninput = y.oninput = () => {
@@ -116,7 +133,7 @@ export function mountMotionControls(sendVector: (value: Vector) => void, isActiv
       }
       listening = true;
       window.addEventListener("deviceorientation", onOrientation);
-      motionStatus.textContent = currentScreenAngle() !== undefined ? "Waiting for motion readings…" : "Unknown screen orientation. Hold the phone steady and recalibrate.";
+      motionStatus.textContent = "Move your phone, then calibrate.";
       armSensorTimeout();
     } catch {
       if (generation === permissionGeneration) motionStatus.textContent = "Could not enable motion. Check browser permissions or use sliders.";
@@ -124,12 +141,25 @@ export function mountMotionControls(sendVector: (value: Vector) => void, isActiv
       if (generation === permissionGeneration) { enabling = false; updateMotionUI(); }
     }
   };
-  calibrate.onclick = () => {
-    if (!latest || currentScreenAngle() === undefined || document.hidden) return;
+  function saveCalibration() {
+    if (neutral || !latest || currentScreenAngle() === undefined || document.hidden) return;
     resetVector();
     neutral = { ...latest };
     calibratedAngle = currentScreenAngle();
-    motionStatus.textContent = "Calibrated. Screen’s right edge down = +X; screen’s top edge down/away = +Y.";
+    confirmation.show();
+    updateMotionUI();
+    onCalibrated();
+  }
+  calibrate.onclick = () => {
+    if (neutral) {
+      onRecalibrating();
+      resetVector();
+      motionStatus.textContent = "Hold steady, then calibrate.";
+      armSensorTimeout();
+      updateMotionUI();
+    } else {
+      saveCalibration();
+    }
   };
   function orientationChanged() {
     if (mode.value === "motion") pauseMotion("Screen rotated. Hold your phone steady and recalibrate.");

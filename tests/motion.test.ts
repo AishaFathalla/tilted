@@ -11,7 +11,7 @@ test("calibrated neutral and radial dead zone are zero", () => {
   assert.ok(motionTarget({ beta: 13, gamma: -3 }, neutral, 90).y > 0); // Diagonal exceeds radial dead zone.
 });
 test("approved angle mapping reaches full strength in four directions", () => {
-  for (const [beta, gamma, x, y] of [[15, 25, 0, 1], [15, -35, 0, -1], [-15, -5, -1, 0], [45, -5, 1, 0]]) {
+  for (const [beta, gamma, x, y] of [[15, 15, 0, 1], [15, -25, 0, -1], [-5, -5, -1, 0], [35, -5, 1, 0]]) {
     const value = motionTarget({ beta, gamma }, neutral, 90);
     near(value.x, x);
     near(value.y, y);
@@ -24,10 +24,10 @@ test("radial clamp preserves diagonal direction and bounds magnitude", () => {
   near(Math.hypot(value.x, value.y), 1);
 });
 test("dead zone rescales remaining range continuously", () => {
-  near(motionTarget({ beta: 15, gamma: 10 }, neutral, 90).y, (0.5 - 0.08) / 0.92);
+  near(motionTarget({ beta: 15, gamma: 5 }, neutral, 90).y, (0.5 - 0.08) / 0.92);
 });
 test("beta uses shortest angular difference across wrap", () => {
-  const value = motionTarget({ beta: -179, gamma: 0 }, { beta: 179, gamma: 0 }, 90);
+  const value = motionTarget({ beta: -179.5, gamma: 0 }, { beta: 179.5, gamma: 0 }, 90);
   assert.deepEqual(value, { x: 0, y: 0 });
 });
 test("simple smoothing converges, stays bounded, and settles to exact zero", () => {
@@ -43,8 +43,8 @@ test("simple smoothing converges, stays bounded, and settles to exact zero", () 
 test("both landscape sides keep screen directions consistent", () => {
   for (const angle of [90, 270] as const) {
     const sign = angle === 90 ? 1 : -1;
-    const right = motionTarget({ beta: neutral.beta + sign * 30, gamma: neutral.gamma }, neutral, angle);
-    const up = motionTarget({ beta: neutral.beta, gamma: neutral.gamma + sign * 30 }, neutral, angle);
+    const right = motionTarget({ beta: neutral.beta + sign * 20, gamma: neutral.gamma }, neutral, angle);
+    const up = motionTarget({ beta: neutral.beta, gamma: neutral.gamma + sign * 20 }, neutral, angle);
     near(right.x, 1); near(right.y, 0);
     near(up.x, 0); near(up.y, 1);
   }
@@ -52,14 +52,14 @@ test("both landscape sides keep screen directions consistent", () => {
 test("both portrait sides keep screen directions consistent", () => {
   for (const angle of [0, 180] as const) {
     const sign = angle === 0 ? 1 : -1;
-    const right = motionTarget({ beta: neutral.beta, gamma: neutral.gamma + sign * 30 }, neutral, angle);
-    const up = motionTarget({ beta: neutral.beta - sign * 30, gamma: neutral.gamma }, neutral, angle);
+    const right = motionTarget({ beta: neutral.beta, gamma: neutral.gamma + sign * 20 }, neutral, angle);
+    const up = motionTarget({ beta: neutral.beta - sign * 20, gamma: neutral.gamma }, neutral, angle);
     near(right.x, 1); near(right.y, 0);
     near(up.x, 0); near(up.y, 1);
   }
 });
 test("portrait uses shortest beta difference across wrap", () => {
-  assert.deepEqual(motionTarget({ beta: -179, gamma: 0 }, { beta: 179, gamma: 0 }, 0), { x: 0, y: 0 });
+  assert.deepEqual(motionTarget({ beta: -179.5, gamma: 0 }, { beta: 179.5, gamma: 0 }, 0), { x: 0, y: 0 });
 });
 test("each screen angle is the previous one's mapping rotated a quarter turn", () => {
   // Rotating the screen 90° counterclockwise maps screen vector (x, y) to (-y, x) for the same physical tilt.

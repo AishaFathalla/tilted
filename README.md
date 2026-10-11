@@ -150,13 +150,20 @@ room server after updating so it can send the shared player roster.
 
 The combined lobby also loads the shared 3D maze on the host screen after room
 creation. Joined players select Phone motion, tap **Enable motion**, hold a
-comfortable neutral pose, then tap **Calibrate**. Portrait and either landscape
+comfortable neutral pose, then tap **Calibrate** to zero the live coordinates.
+Calibration marks the player ready and locks the saved zero on screen while live
+relative tilt continues controlling the maze. Choose **Re-calibrate**, then
+**Calibrate** to save a new neutral pose. Portrait and either landscape
 side are supported; rotating the screen requires recalibration. Motion requires
 trusted HTTPS on phones. **Slider fallback** works without motion permission.
 The host's team average drives the maze physics, and **New maze** resets the board.
 
-On the combined lobby, rounds have a two-minute limit starting with the first
-nonzero team input. A win or timeout freezes the ball and opens the result menu.
+On the combined lobby, players tap **Ready** below the motion controls after
+setting up their phone (or sliders). The ball stays still and the three-minute timer
+waits until every joined player is ready. The player list shows who is ready.
+Restarting or choosing the next maze clears readiness for everyone; tap Ready
+again for the new round. Once a round starts, its timer keeps running.
+A win or timeout freezes the ball and opens the result menu.
 **Restart** retries the same maze, **Next maze** generates a new board, and
 **Exit** closes the hosted room and returns to the menu. The duration is configured
 by `ROUND_SECONDS` in `apps/lobby/main.ts`.

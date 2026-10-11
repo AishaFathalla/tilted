@@ -4,6 +4,8 @@ import { createMazeView } from "./draw";
 import { cellCenter, type Maze } from "./maze";
 import { createMazePhysics, STEP_MS } from "./physics";
 import { createRound } from "./round";
+import { teamworkBoost } from "./teamwork";
+import type { PlayerInput } from "./player-vectors";
 
 const TILT_EASING = 0.15; // fraction of the remaining tilt applied per physics step
 const GOAL_RADIUS = CELL_SIZE * 0.35; // matches the drawn goal disc
@@ -15,6 +17,7 @@ const MAX_CATCH_UP_MS = 250; // after a stalled tab, skip ahead instead of simul
  */
 export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number) => void, options?: {
   durationSeconds?: number;
+  requireReady?: boolean;
   onTick: (remaining: number, started: boolean) => void;
   onLost: () => void;
 }) {
@@ -27,13 +30,19 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
   let solved = false;
   const round = options ? createRound(options.durationSeconds ?? 120) : undefined;
   let frameTime = performance.now();
+  let boostTarget = 1;
+  let boost = 1;
+  let ready = !options?.requireReady;
+  let started = false;
 
   function step() {
+    if (!started && options?.requireReady) return;
     tilt.x += (target.x - tilt.x) * TILT_EASING;
     tilt.y += (target.y - tilt.y) * TILT_EASING;
+    boost += (boostTarget - boost) * TILT_EASING;
     if (!physics || solved) return;
     if (steps === 0 && !target.x && !target.y) return;
-    physics.step(tilt);
+    physics.step(tilt, boost);
     steps++;
     const ball = physics.ball;
     if (Math.hypot(ball.x - goal.x, ball.y - goal.y) < GOAL_RADIUS) {
@@ -48,7 +57,8 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
   function frame(now: number) {
     frameTime = now;
     if (physics && round && !solved) {
-      const result = round.advance(now, Boolean(target.x || target.y));
+      const result = round.advance(now, options?.requireReady ? ready : Boolean(target.x || target.y));
+      started = result.state !== "waiting";
       options!.onTick(result.remaining, result.state !== "waiting");
       if (result.state === "lost") { solved = true; options!.onLost(); }
     }
@@ -63,13 +73,20 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
   requestAnimationFrame(frame);
 
   return {
-    setPlayerVectors: view.setPlayerVectors,
+    setReady(value: boolean) { ready = value; },
+    setPlayerVectors(players: PlayerInput[]) {
+      view.setPlayerVectors(players);
+      boostTarget = teamworkBoost(players.map((player) => player.vector));
+    },
     setMaze(maze: Maze) {
       physics = createMazePhysics(maze);
       goal = cellCenter(maze.goal, CELL_SIZE);
       steps = 0;
       solved = false;
+      started = false;
+      ready = !options?.requireReady;
       tilt.x = tilt.y = 0;
+      boost = 1;
       pending = 0;
       last = performance.now();
       round?.reset();
