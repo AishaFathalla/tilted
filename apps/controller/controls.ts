@@ -21,8 +21,35 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
   let smoothed: Vector = { x: 0, y: 0 };
   let sensorTimer: ReturnType<typeof setTimeout> | undefined;
   let permissionGeneration = 0;
+  let lockGeneration = 0;
+  let ownsOrientationLock = false;
+  const orientationAPI = screen.orientation as (ScreenOrientation & {
+    lock?: (orientation: string) => Promise<void>;
+  }) | undefined;
+
+  async function lockOrientation() {
+    if (!orientationAPI?.lock) return;
+    const generation = lockGeneration;
+    // Capture the exact side before entering fullscreen, which may rotate the screen.
+    const chosenOrientation = orientationAPI.type;
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+      if (generation !== lockGeneration || !neutral) return;
+      ownsOrientationLock = true;
+      await orientationAPI.lock(chosenOrientation);
+    } catch {
+      // Browsers may reject locking. The saved sensor frame still keeps play stable.
+    }
+  }
 
   function resetVector() {
+    lockGeneration++;
+    if (ownsOrientationLock) {
+      orientationAPI?.unlock();
+      ownsOrientationLock = false;
+    }
     confirmation.reset();
     neutral = undefined;
     calibratedAngle = undefined;
@@ -65,17 +92,13 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
   }
   function onOrientation(event: DeviceOrientationEvent) {
     if (mode.value !== "motion" || !isActive() || document.hidden) return;
-    const angle = currentScreenAngle();
+    const angle = calibratedAngle ?? currentScreenAngle();
     if (angle === undefined) {
       pauseMotion("Motion paused: unknown screen orientation. Hold the phone steady and recalibrate.");
       return;
     }
     if (event.beta === null || event.gamma === null || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) {
       pauseMotion("Motion readings unavailable. Use sliders or wait for readings and recalibrate.");
-      return;
-    }
-    if (neutral && angle !== calibratedAngle) {
-      pauseMotion("Screen rotated. Hold your phone steady and recalibrate.");
       return;
     }
     armSensorTimeout();
@@ -146,6 +169,7 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     resetVector();
     neutral = { ...latest };
     calibratedAngle = currentScreenAngle();
+    void lockOrientation();
     confirmation.show();
     updateMotionUI();
     onCalibrated();
@@ -162,7 +186,7 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     }
   };
   function orientationChanged() {
-    if (mode.value === "motion") pauseMotion("Screen rotated. Hold your phone steady and recalibrate.");
+    if (mode.value === "motion" && !neutral) pauseMotion("Screen rotated. Hold your phone steady and calibrate.");
   }
   screen.orientation?.addEventListener("change", orientationChanged);
   window.addEventListener("orientationchange", orientationChanged);
