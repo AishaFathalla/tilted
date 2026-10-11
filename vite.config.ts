@@ -10,7 +10,11 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      input: { host: "apps/host/index.html", controller: "apps/controller/index.html" },
+      input: {
+        main: "index.html",
+        host: "apps/host/index.html",
+        controller: "apps/controller/index.html",
+      },
     },
   },
 });

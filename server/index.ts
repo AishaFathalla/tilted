@@ -5,6 +5,14 @@ import type { Player, ServerMessage } from "../shared/protocol";
 const server = new WebSocketServer({ port: 8080, path: "/ws", maxPayload: 4096 });
 type Room = { code: string; host: WebSocket; players: Map<WebSocket, Player> };
 let room: Room | undefined;
+const colors = ["#d95764", "#4885ce", "#529d65", "#b08a24", "#8b63be", "#d67439", "#369b9b", "#bd608f"];
+let colorSequence = 0;
+function sendPlayers() {
+  if (!room) return;
+  const message: ServerMessage = { type: "players", players: [...room.players.values()] };
+  send(room.host, message);
+  for (const controller of room.players.keys()) send(controller, message);
+}
 
 function send(socket: WebSocket, message: ServerMessage) {
   if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -51,6 +59,7 @@ server.on("connection", (socket) => {
       room = { code: String(randomInt(100000, 1000000)), host: socket, players: new Map() };
       role = "host";
       send(socket, { type: "created", room: room.code });
+      sendPlayers();
       return;
     }
     if (!("room" in message) || typeof message.room !== "string" ||
@@ -59,11 +68,14 @@ server.on("connection", (socket) => {
       return reject("Enter a room code and a name of 1–40 characters.");
     }
     if (!room || message.room.trim() !== room.code) return reject("Room not found.");
-    const player = { id: randomUUID(), name: message.name.trim() };
+    const used = new Set([...room.players.values()].map((player) => player.color));
+    const color = colors.find((candidate) => !used.has(candidate)) ?? `hsl(${(colorSequence++ * 137.5) % 360} 55% 45%)`;
+    const player = { id: randomUUID(), name: message.name.trim(), color };
     role = "controller";
     room.players.set(socket, player);
     send(socket, { type: "joined", room: room.code, playerId: player.id });
     send(room.host, { type: "player_joined", player });
+    sendPlayers();
   });
 
   socket.on("close", () => {
@@ -80,6 +92,7 @@ server.on("connection", (socket) => {
       if (player) {
         room.players.delete(socket);
         send(room.host, { type: "player_left", playerId: player.id });
+        sendPlayers();
       }
     }
   });

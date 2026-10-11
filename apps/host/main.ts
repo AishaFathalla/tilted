@@ -9,7 +9,14 @@ const list = document.querySelector<HTMLUListElement>("#players")!;
 const count = document.querySelector<HTMLSpanElement>("#count")!;
 const mean = document.querySelector<HTMLParagraphElement>("#mean")!;
 const meanArrow = document.querySelector<SVGSVGElement>("#mean-arrow")!;
-const players = new Map<string, { item: HTMLLIElement; name: string; vector: Vector }>();
+const emptyList = document.querySelector<HTMLParagraphElement>("#no-players")!;
+const playerColors = ["#d95764", "#4885ce", "#529d65", "#b08a24", "#8b63be", "#d67439", "#369b9b", "#bd608f"];
+const players = new Map<string, { item: HTMLLIElement; name: string; vector: Vector; color: string }>();
+let extraColor = 0;
+function nextPlayerColor(): string {
+  const used = new Set([...players.values()].map((player) => player.color));
+  return playerColors.find((color) => !used.has(color)) ?? `hsl(${(extraColor++ * 137.5) % 360} 55% 45%)`;
+}
 function drawArrow(svg: SVGSVGElement, vector: Vector) {
   // SVG Y increases downward; control Y increases upward.
   const x = vector.x * 70;
@@ -25,18 +32,30 @@ function render() {
     x += player.vector.x;
     y += player.vector.y;
     player.item.replaceChildren();
+    const dot = document.createElement("span");
+    dot.className = "player-color";
+    dot.style.backgroundColor = player.color;
+    dot.setAttribute("aria-hidden", "true");
     const label = document.createElement("span");
-    label.textContent = `${player.name}: (${player.vector.x.toFixed(2)}, ${player.vector.y.toFixed(2)})`;
+    label.className = "player-info";
+    const playerName = document.createElement("strong");
+    playerName.textContent = player.name;
+    const coordinates = document.createElement("small");
+    coordinates.textContent = `(${player.vector.x.toFixed(2)}, ${player.vector.y.toFixed(2)})`;
+    label.append(playerName, coordinates);
     const arrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     arrow.setAttribute("viewBox", "-110 -110 220 220");
     arrow.setAttribute("width", "120");
     arrow.setAttribute("height", "120");
     arrow.setAttribute("aria-label", `${player.name} vector`);
+    arrow.setAttribute("role", "img");
+    arrow.style.color = player.color;
     drawArrow(arrow, player.vector);
-    player.item.append(label, arrow);
+    player.item.append(dot, label, arrow);
   }
   const value = { x: players.size ? x / players.size : 0, y: players.size ? y / players.size : 0 };
   count.textContent = String(players.size);
+  emptyList.hidden = players.size > 0;
   mean.textContent = `(${value.x.toFixed(2)}, ${value.y.toFixed(2)})`;
   drawArrow(meanArrow, value);
   game.setTeamVector(value);
@@ -68,7 +87,7 @@ socket.onmessage = (event) => {
     room.textContent = `Room code: ${message.room}. Phones: ${location.origin}/apps/controller/`;
   } else if (message.type === "player_joined") {
     const item = document.createElement("li");
-    players.set(message.player.id, { item, name: message.player.name, vector: { x: 0, y: 0 } });
+    players.set(message.player.id, { item, name: message.player.name, vector: { x: 0, y: 0 }, color: nextPlayerColor() });
     list.append(item);
     render();
   } else if (message.type === "player_left") {

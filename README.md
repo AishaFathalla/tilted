@@ -136,6 +136,25 @@ tiltocracy/
 
 ## Development
 
+### Combined lobby
+
+Run `npm run dev:server` and `npm run dev:web` in separate terminals, then open
+`http://localhost:5173/`. Create and Join are on this same page. The creator
+hosts the room; players enter a name and the six-digit code to join. Everyone
+in the room sees the live player list with matching assigned colors. Players
+get slider controls, and the host sees the team average. The host is a shared
+screen and does not count as a player.
+
+Phones should open `http://<laptop-LAN-IP>:5173/`, not localhost. Restart the
+room server after updating so it can send the shared player roster.
+
+The combined lobby also loads the shared 3D maze on the host screen after room
+creation. Joined players select Phone motion, tap **Enable motion**, hold a
+comfortable neutral pose, then tap **Calibrate**. Portrait and either landscape
+side are supported; rotating the screen requires recalibration. Motion requires
+trusted HTTPS on phones. **Slider fallback** works without motion permission.
+The host's team average drives the maze physics, and **New maze** resets the board.
+
 Tiltocracy is built as a real-time multiplayer web experience with a focus on:
 
 - responsive physical input

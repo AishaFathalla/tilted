@@ -1,0 +1,59 @@
+﻿<!doctype html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tilted</title><link rel="stylesheet" href="/apps/lobby/style.css"></head>
+<body><main>
+  <h1 class="logo">
+    <svg viewBox="0 0 144 104" aria-hidden="true" focusable="false">
+      <path d="M38 63L80 79L109 45V51L80 85L38 69Z" fill="#d3d3d3" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <g transform="matrix(.8 .3 -.55 .65 65 23)">
+        <path d="M6 6H58V58H6Z" fill="#fff"/>
+        <g fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="square" stroke-linejoin="miter">
+          <path d="M26 6H6V58H58V6H38"/>
+          <path d="M18 6V30H30V18H46V42H34V58M6 42H22V58M46 30H58"/>
+        </g>
+      </g>
+      <circle cx="74" cy="48" r="4" fill="#fff" stroke="currentColor" stroke-width="2"/>
+      <g fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M45 36L26 24M27 32L26 24L34 23" stroke="#d95764"/>
+        <path d="M101 68L120 80M112 81L120 80L119 72" stroke="#4885ce"/>
+        <path d="M58 76L45 91M45 83L45 91L53 90" stroke="#529d65"/>
+        <path d="M89 27L102 12M94 13L102 12L102 20" stroke="#b08a24"/>
+      </g>
+    </svg>
+    <span>Tilted</span>
+  </h1>
+  <p id="status" role="status">Connecting...</p>
+  <div class="layout">
+    <section class="panel">
+      <div id="setup">
+        <h2>Play with friends</h2>
+        <button id="create" disabled>Create room</button>
+        <p class="separator">or join a room</p>
+        <form id="join">
+          <label for="name">Your name</label><input id="name" required maxlength="40" autocomplete="nickname">
+          <label for="code">Room code</label><input id="code" required inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off">
+          <button id="submit" disabled>Join room</button>
+        </form>
+      </div>
+      <div id="room-info" hidden><button id="back" class="back-button" type="button" hidden>← Back</button><h2>Room <span id="room-code"></span></h2><p id="room-note"></p><p class="hint">Open this same page on your phones. Use the laptop's network IP instead of localhost.</p></div>
+      <fieldset id="controls" hidden disabled>
+        <legend>Your controls</legend>
+        <label for="mode">Input mode</label>
+        <select id="mode"><option value="motion">Phone motion</option><option value="sliders">Slider fallback</option></select>
+        <p class="hint">Hold your phone comfortably in portrait or either landscape direction. Enable motion, then calibrate. Recalibrate if you rotate the screen.</p>
+        <p id="motion-status" role="status">Tap Enable motion, then calibrate.</p>
+        <div class="motion-actions"><button id="enable-motion" type="button">Enable motion</button><button id="calibrate" type="button" disabled>Calibrate</button></div>
+        <div id="sliders" hidden><label for="x">Left / Right</label><input id="x" type="range" min="-1" max="1" step="0.01" value="0"><label for="y">Down / Up</label><input id="y" type="range" min="-1" max="1" step="0.01" value="0"></div>
+        <output id="vector">(0.00, 0.00)</output>
+      </fieldset>
+      <p id="team" hidden>Team direction: <output id="mean">(0.00, 0.00)</output></p>
+    </section>
+    <section class="panel" aria-labelledby="players-heading"><h2 id="players-heading">Players <span id="count">0</span></h2><p id="empty" class="hint">Players will appear here when they join.</p><ul id="players"></ul></section>
+  </div>
+  <section id="game-panel" class="panel" hidden aria-labelledby="maze-heading">
+    <div class="maze-heading"><h2 id="maze-heading">Maze</h2><button id="new-maze" type="button">New maze</button></div>
+    <p id="maze-status" role="status">Waiting for the board...</p>
+    <canvas id="maze" aria-label="Shared maze board">Your browser needs WebGL to display the maze.</canvas>
+    <p class="hint">Seed: <span id="maze-seed"></span></p>
+  </section>
+</main><script type="module" src="/apps/lobby/main.ts"></script></body></html>
