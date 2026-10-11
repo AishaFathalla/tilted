@@ -1,0 +1,24 @@
+.pilot-card { --pilot-color: #567c46; padding: 18px; margin: 0 0 16px; border-radius: 18px; color: #30372f; background: radial-gradient(ellipse at 50% 42%, #fff 20%, #f1f4ec 100%); border: 1px solid #dfe3da; }
+.pilot-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pilot-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: #6c746a; }
+#pilot-name { color: var(--pilot-color); font-size: 16px; overflow-wrap: anywhere; }
+.tilt-pad { display: block; width: min(100%, 270px); margin: 8px auto; overflow: visible; color: var(--pilot-color); }
+.pad-field { fill: #fff; stroke: #e1e7da; stroke-width: 1; }
+.pad-ring { fill: none; stroke: #e7ecdf; stroke-dasharray: 3 5; }
+.pad-axis { stroke: #edf0e9; stroke-width: 1; }
+.tilt-pad text { fill: #9ba693; font: 12px Arial, sans-serif; }
+.pad-glow { fill: currentColor; opacity: .1; }
+.pad-center { fill: currentColor; }
+.pad-arrow { fill: none; stroke: currentColor; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.pilot-readout { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; }
+.pilot-strength { color: var(--pilot-color); font-variant-numeric: tabular-nums; }
+.pilot-meter { height: 5px; margin-top: 10px; overflow: hidden; border-radius: 6px; background: #e4e9dd; }
+.pilot-meter span { display: block; width: 0; height: 100%; background: var(--pilot-color); border-radius: inherit; }
+.pilot-tip { text-align: center; font-size: 11px; color: #6c746a; margin: 12px 0 0; }
+.is-calibrated .pad-glow { animation: neutral-glow 2.8s ease-in-out infinite; }
+.tilting .pad-glow { animation: none; opacity: .15; }
+.controller-settings { margin-top: 14px; border-top: 1px solid #e3e7dd; padding-top: 12px; }
+.controller-settings summary { cursor: pointer; color: #6c746a; font-size: 12px; padding: 6px 0; }
+@keyframes neutral-glow { 50% { opacity: .2; } }
+@media (orientation: landscape) and (max-height: 600px) { .pilot-card { position: relative; padding-left: 210px; min-height: 192px; display: flex; flex-direction: column; justify-content: center; } .tilt-pad { position: absolute; left: 10px; top: 5px; width: 180px; margin: 0; } .pilot-heading { flex-direction: column; align-items: flex-start; margin-bottom: 14px; } }
+@media (prefers-reduced-motion: reduce) { .is-calibrated .pad-glow { animation: none; } }

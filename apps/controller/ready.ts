@@ -30,7 +30,6 @@ export function mountReadyButton(socket: WebSocket, getPlayerId: () => string | 
     recalibrate() {
       if (!getPlayerId() || socket.readyState !== WebSocket.OPEN) return;
       allowed = false;
-      ready = false;
       reject();
       socket.send(JSON.stringify({ type: "recalibrate" }));
     },

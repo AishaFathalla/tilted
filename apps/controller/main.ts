@@ -1,6 +1,8 @@
 ﻿import type { ServerMessage, Vector } from "../../shared/protocol";
 import { mountMotionControls } from "./controls";
 import { mountReadyButton } from "./ready";
+import { updatePhoneIdentity } from "./phone-view";
+import "./phone-view.css";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
 const form = document.querySelector<HTMLFormElement>("#join")!;
@@ -39,6 +41,7 @@ socket.onmessage = (event) => {
     controls.disabled = false;
     status.textContent = `Room ${message.room}`;
   } else if (message.type === "players") {
+    updatePhoneIdentity(message.players.find((player) => player.id === playerId));
     ready.update(message.players);
   } else if (message.type === "error") {
     ready.reject();

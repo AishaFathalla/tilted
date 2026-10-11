@@ -1,5 +1,6 @@
 import type { Vector } from "../../shared/protocol";
 import { calibrationFeedback } from "./calibration-feedback";
+import { mountPhoneView } from "./phone-view";
 import { MOTION, motionTarget, screenAngle, smoothVector, type Pose, type ScreenAngle } from "./motion";
 
 // Reuse the controller's sensor flow on the combined lobby page.
@@ -13,6 +14,8 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
   const motionStatus = document.querySelector<HTMLParagraphElement>("#motion-status")!;
   const sliders = document.querySelector<HTMLDivElement>("#sliders")!;
   const confirmation = calibrationFeedback(calibrate, motionStatus);
+  const controlPanel = document.querySelector<HTMLElement>("#controls");
+  const phoneView = controlPanel ? mountPhoneView(controlPanel) : undefined;
   let listening = false;
   let enabling = false;
   let latest: Pose | undefined;
@@ -21,10 +24,39 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
   let smoothed: Vector = { x: 0, y: 0 };
   let sensorTimer: ReturnType<typeof setTimeout> | undefined;
   let permissionGeneration = 0;
+  let lockGeneration = 0;
+  let ownsOrientationLock = false;
+  const orientationAPI = screen.orientation as (ScreenOrientation & {
+    lock?: (orientation: string) => Promise<void>;
+  }) | undefined;
+
+  async function lockOrientation() {
+    if (!orientationAPI?.lock) return;
+    const generation = lockGeneration;
+    // Capture the exact side before entering fullscreen, which may rotate the screen.
+    const chosenOrientation = orientationAPI.type;
+    try {
+      if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+      if (generation !== lockGeneration || !neutral) return;
+      ownsOrientationLock = true;
+      await orientationAPI.lock(chosenOrientation);
+    } catch {
+      // Browsers may reject locking. The saved sensor frame still keeps play stable.
+    }
+  }
 
   function resetVector() {
+    lockGeneration++;
+    if (ownsOrientationLock) {
+      orientationAPI?.unlock();
+      ownsOrientationLock = false;
+    }
     confirmation.reset();
     neutral = undefined;
+    phoneView?.calibrated(false);
+    phoneView?.update({ x: 0, y: 0 });
     calibratedAngle = undefined;
     smoothed = { x: 0, y: 0 };
     x.value = y.value = "0";
@@ -47,6 +79,7 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     if (neutral) {
       // Preserve calibration and quietly stop stale input until readings resume.
       smoothed = { x: 0, y: 0 };
+      phoneView?.update(smoothed);
       sendVector(smoothed, false);
       return;
     }
@@ -65,17 +98,13 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
   }
   function onOrientation(event: DeviceOrientationEvent) {
     if (mode.value !== "motion" || !isActive() || document.hidden) return;
-    const angle = currentScreenAngle();
+    const angle = calibratedAngle ?? currentScreenAngle();
     if (angle === undefined) {
       pauseMotion("Motion paused: unknown screen orientation. Hold the phone steady and recalibrate.");
       return;
     }
     if (event.beta === null || event.gamma === null || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) {
       pauseMotion("Motion readings unavailable. Use sliders or wait for readings and recalibrate.");
-      return;
-    }
-    if (neutral && angle !== calibratedAngle) {
-      pauseMotion("Screen rotated. Hold your phone steady and recalibrate.");
       return;
     }
     armSensorTimeout();
@@ -85,6 +114,7 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
       motionStatus.textContent = "Hold steady, then calibrate.";
     }
     smoothed = smoothVector(smoothed, motionTarget(latest, neutral ?? { beta: 0, gamma: 0 }, angle));
+    phoneView?.update(smoothed);
     if (neutral) {
       // Keep the saved zero visible; gameplay still receives live relative tilt.
       sendVector(smoothed, false);
@@ -108,7 +138,11 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     updateMotionUI();
   };
   x.oninput = y.oninput = () => {
-    if (mode.value === "sliders") sendVector({ x: Number(x.value), y: Number(y.value) });
+    if (mode.value === "sliders") {
+      const value = { x: Number(x.value), y: Number(y.value) };
+      phoneView?.update(value);
+      sendVector(value);
+    }
   };
   enable.onclick = async () => {
     resetVector();
@@ -146,6 +180,8 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     resetVector();
     neutral = { ...latest };
     calibratedAngle = currentScreenAngle();
+    phoneView?.calibrated(true);
+    void lockOrientation();
     confirmation.show();
     updateMotionUI();
     onCalibrated();
@@ -162,7 +198,7 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     }
   };
   function orientationChanged() {
-    if (mode.value === "motion") pauseMotion("Screen rotated. Hold your phone steady and recalibrate.");
+    if (mode.value === "motion" && !neutral) pauseMotion("Screen rotated. Hold your phone steady and calibrate.");
   }
   screen.orientation?.addEventListener("change", orientationChanged);
   window.addEventListener("orientationchange", orientationChanged);

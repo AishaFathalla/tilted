@@ -54,6 +54,17 @@ test("motion streams before manual calibration, which immediately zeros the curr
   orientation!({ beta: 30, gamma: 10 });
   assert.ok(vectors.at(-1)!.x > 0);
   assert.equal(elements.get("#vector").textContent, "(0.00, 0.00)");
+  // Auto-rotation must preserve the saved landscape movement frame, even when
+  // the browser does not expose native orientation locking.
+  globals.screen.orientation.angle = 0;
+  orientation!({ beta: 30, gamma: 10 });
+  assert.ok(vectors.at(-1)!.x > 0);
+  assert.equal(vectors.at(-1)!.y, 0);
+  assert.equal(readyRequests, 1);
+  globals.screen.orientation.angle = 270;
+  orientation!({ beta: 30, gamma: 10 });
+  assert.ok(vectors.at(-1)!.x > 0);
+  assert.equal(vectors.at(-1)!.y, 0);
   t.mock.timers.tick(2001);
   assert.equal(elements.get("#motion-status").textContent, "Calibrated!");
   assert.equal(elements.get("#calibrate").textContent, "Re-calibrate");
@@ -68,9 +79,25 @@ test("motion streams before manual calibration, which immediately zeros the curr
   t.mock.timers.tick(2001);
   assert.equal(elements.get("#motion-status").textContent, "No motion readings. Try sliders.");
   orientation!({ beta: 30, gamma: 10 });
+  const lockRequests: string[] = [];
+  let unlockRequests = 0;
+  let fullscreenRequests = 0;
+  Object.assign(globals.document, {
+    documentElement: { async requestFullscreen() { fullscreenRequests++; } },
+  });
+  Object.assign(globals.screen.orientation, {
+    type: "landscape-secondary",
+    async lock(value: string) { lockRequests.push(value); },
+    unlock() { unlockRequests++; },
+  });
   elements.get("#calibrate").onclick();
+  await Promise.resolve();
+  assert.deepEqual(lockRequests, ["landscape-secondary"]);
+  assert.equal(fullscreenRequests, 1);
   assert.equal(readyRequests, 2);
   assert.equal(elements.get("#motion-status").textContent, "Calibrated!");
   orientation!({ beta: 30, gamma: 10 });
   assert.deepEqual(vectors.at(-1), { x: 0, y: 0 });
+  elements.get("#calibrate").onclick();
+  assert.equal(unlockRequests, 1);
 });

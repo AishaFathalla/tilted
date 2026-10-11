@@ -2,7 +2,7 @@ import Matter from "matter-js";
 import type { Vector } from "../../shared/protocol";
 import { BALL_RADIUS, CELL_SIZE, WALL_THICKNESS } from "./dimensions";
 import { cellCenter, wallRects, type Maze } from "./maze";
-const { Bodies, Body, Composite, Engine } = Matter;
+const { Bodies, Body, Composite, Engine, Events } = Matter;
 
 /** Fixed physics step; Matter.js behaves consistently only with a constant delta. */
 export const STEP_MS = 1000 / 60;
@@ -20,7 +20,7 @@ const ROLLING_RESISTANCE = 0.04;
 const MAX_SPEED = 8;
 
 /** 2D simulation in maze world coordinates (x right, y down), matching wallRects and cellCenter. */
-export function createMazePhysics(maze: Maze) {
+export function createMazePhysics(maze: Maze, onImpact?: (speed: number) => void) {
   const engine = Engine.create({ gravity: { x: 0, y: 0 } });
   const walls = wallRects(maze, CELL_SIZE, WALL_THICKNESS).map((rect) =>
     Bodies.rectangle(rect.x, rect.y, rect.width, rect.height, { isStatic: true, friction: 0, restitution: 0.3 }));
@@ -32,6 +32,10 @@ export function createMazePhysics(maze: Maze) {
     restitution: 0.3,
   });
   Composite.add(engine.world, [...walls, ball]);
+  let incomingSpeed = 0;
+  if (onImpact) Events.on(engine, "collisionStart", (event) => {
+    if (event.pairs.some((pair) => pair.bodyA === ball || pair.bodyB === ball)) onImpact(incomingSpeed);
+  });
 
   return {
     /** Ball center in maze world coordinates. */
@@ -43,6 +47,7 @@ export function createMazePhysics(maze: Maze) {
       engine.gravity.x = tilt.x * GRAVITY * accelerationBoost;
       engine.gravity.y = -tilt.y * GRAVITY * accelerationBoost;
       if (Body.getSpeed(ball) > MAX_SPEED) Body.setSpeed(ball, MAX_SPEED);
+      incomingSpeed = Body.getSpeed(ball);
       Engine.update(engine, STEP_MS);
       if (Body.getSpeed(ball) > MAX_SPEED) Body.setSpeed(ball, MAX_SPEED);
     },

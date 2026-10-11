@@ -38,21 +38,22 @@
       <div id="room-info" hidden><button id="back" class="back-button" type="button" hidden>← Back</button><h2>Room <span id="room-code"></span></h2><p id="room-note"></p></div>
       <fieldset id="controls" hidden disabled>
         <legend>Your controls</legend>
-        <label for="mode">Input mode</label>
-        <select id="mode"><option value="motion">Phone motion</option><option value="sliders">Slider fallback</option></select>
         <p id="motion-status" role="status">Hold steady and enable motion.</p>
         <div class="motion-actions"><button id="enable-motion" type="button">Enable motion</button><button id="calibrate" type="button" disabled>Calibrate</button></div>
         <button id="ready" type="button" aria-pressed="false">Ready</button>
-        <p class="hint">Everyone ready? Game on.</p>
+        <details class="controller-settings"><summary>Settings &amp; slider fallback</summary>
+        <label for="mode">Input mode</label>
+        <select id="mode"><option value="motion">Phone motion</option><option value="sliders">Slider fallback</option></select>
         <div id="sliders" hidden><label for="x">Left / Right</label><input id="x" type="range" min="-1" max="1" step="0.01" value="0"><label for="y">Down / Up</label><input id="y" type="range" min="-1" max="1" step="0.01" value="0"></div>
         <output id="vector">(0.00, 0.00)</output>
+        </details>
       </fieldset>
       <p id="team" hidden>Team direction: <output id="mean">(0.00, 0.00)</output></p>
     </section>
     <section class="panel" aria-labelledby="players-heading"><h2 id="players-heading">Players <span id="count">0</span></h2><p id="empty" class="hint">Waiting for friends…</p><ul id="players"></ul></section>
   </div>
   <section id="game-panel" class="panel" hidden aria-labelledby="maze-heading">
-    <div class="maze-heading"><h2 id="maze-heading">Maze</h2><span class="round-timer">Time left <output id="timer">3:00</output></span><button id="restart-maze" type="button" disabled>Restart maze</button><button id="new-maze" type="button">Next maze</button></div>
+    <div class="maze-heading"><h2 id="maze-heading">Maze</h2><span class="round-timer">Time left <output id="timer">3:00</output></span><button id="sound-toggle" type="button" aria-pressed="true">Sound on</button><button id="restart-maze" type="button" disabled>Restart maze</button><button id="new-maze" type="button">Next maze</button></div>
     <p id="maze-status" role="status">Waiting for the board...</p>
     <div id="maze-stage" class="maze-stage waiting">
       <canvas id="maze" aria-label="Shared maze board">Your browser needs WebGL to display the maze.</canvas>
@@ -61,6 +62,7 @@
     <p class="hint" hidden>Seed: <span id="maze-seed"></span></p>
   </section>
   <dialog id="round-result" aria-labelledby="result-title" aria-describedby="result-message">
+    <div class="result-emblem" aria-hidden="true">✦</div>
     <h2 id="result-title"></h2><p id="result-message"></p>
     <div class="result-actions"><button id="restart-round" type="button" autofocus>Restart</button><button id="next-round" type="button">Next maze</button><button id="exit-round" class="secondary-button" type="button">Exit</button></div>
   </dialog>
