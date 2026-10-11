@@ -31,4 +31,14 @@ input[type=range] { width: 100%; min-height: 30px; }
 output { font-variant-numeric: tabular-nums; }
 #vector { display: block; text-align: center; margin-top: 12px; }
 [hidden] { display: none !important; }
+.motion-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.motion-actions button { flex: 1; width: auto; }
+select { width: 100%; min-height: 40px; padding: 8px; font: inherit; }
+#motion-status { font-size: 13px; line-height: 1.5; }
+#game-panel { margin-top: 18px; }
+.maze-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.maze-heading h2 { margin: 0; }
+#new-maze { width: auto; }
+#maze-status { font-size: 13px; line-height: 1.5; }
+#maze { display: block; width: 100%; height: clamp(240px, 52vw, 480px); }
 @media (max-width: 550px) { .layout { grid-template-columns: 1fr; } main { padding: 18px; } }

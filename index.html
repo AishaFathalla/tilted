@@ -36,9 +36,24 @@
         </form>
       </div>
       <div id="room-info" hidden><button id="back" class="back-button" type="button" hidden>← Back</button><h2>Room <span id="room-code"></span></h2><p id="room-note"></p><p class="hint">Open this same page on your phones. Use the laptop's network IP instead of localhost.</p></div>
-      <fieldset id="controls" hidden disabled><legend>Your controls</legend><label for="x">Left / Right</label><input id="x" type="range" min="-1" max="1" step="0.01" value="0"><label for="y">Down / Up</label><input id="y" type="range" min="-1" max="1" step="0.01" value="0"><output id="vector">(0.00, 0.00)</output></fieldset>
+      <fieldset id="controls" hidden disabled>
+        <legend>Your controls</legend>
+        <label for="mode">Input mode</label>
+        <select id="mode"><option value="motion">Phone motion</option><option value="sliders">Slider fallback</option></select>
+        <p class="hint">Hold your phone comfortably in portrait or either landscape direction. Enable motion, then calibrate. Recalibrate if you rotate the screen.</p>
+        <p id="motion-status" role="status">Tap Enable motion, then calibrate.</p>
+        <div class="motion-actions"><button id="enable-motion" type="button">Enable motion</button><button id="calibrate" type="button" disabled>Calibrate</button></div>
+        <div id="sliders" hidden><label for="x">Left / Right</label><input id="x" type="range" min="-1" max="1" step="0.01" value="0"><label for="y">Down / Up</label><input id="y" type="range" min="-1" max="1" step="0.01" value="0"></div>
+        <output id="vector">(0.00, 0.00)</output>
+      </fieldset>
       <p id="team" hidden>Team direction: <output id="mean">(0.00, 0.00)</output></p>
     </section>
     <section class="panel" aria-labelledby="players-heading"><h2 id="players-heading">Players <span id="count">0</span></h2><p id="empty" class="hint">Players will appear here when they join.</p><ul id="players"></ul></section>
   </div>
+  <section id="game-panel" class="panel" hidden aria-labelledby="maze-heading">
+    <div class="maze-heading"><h2 id="maze-heading">Maze</h2><button id="new-maze" type="button">New maze</button></div>
+    <p id="maze-status" role="status">Waiting for the board...</p>
+    <canvas id="maze" aria-label="Shared maze board">Your browser needs WebGL to display the maze.</canvas>
+    <p class="hint">Seed: <span id="maze-seed"></span></p>
+  </section>
 </main><script type="module" src="/apps/lobby/main.ts"></script></body></html>

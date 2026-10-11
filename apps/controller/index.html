@@ -1,6 +1,23 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tiltocracy Controller</title></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Tiltocracy Controller</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 16px; }
+  button, select, input { font: inherit; }
+  button, select { min-height: 44px; }
+  fieldset { max-width: 900px; }
+  output { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+  @media (orientation: landscape) and (max-height: 600px) {
+    body { margin: 8px 16px; }
+    h1 { font-size: 1.2rem; margin: 0; }
+    p { margin: 6px 0; }
+    #join { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    fieldset { padding: 8px 12px; }
+    #sliders input { width: 35vw !important; }
+  }
+  [hidden] { display: none !important; }
+</style>
+</head>
 <body>
   <h1>Tiltocracy Controller</h1>
   <p id="status">Connecting…</p>
@@ -10,10 +27,17 @@
     <button id="submit" disabled>Join room</button>
   </form>
   <fieldset id="controls" hidden disabled>
-    <legend>Dummy vector</legend>
+    <legend>Controller input</legend>
+    <p><label>Input mode <select id="mode"><option value="motion">Phone motion</option><option value="sliders">Slider fallback</option></select></label></p>
+    <p>Hold your phone sideways (landscape) or upright (portrait), then calibrate. Tip: on iPhone, turn on Portrait Orientation Lock and play in portrait so the screen can't rotate mid-game.</p>
+    <p id="motion-status" role="status">Tap Enable motion, then calibrate.</p>
+    <button id="enable-motion" type="button">Enable motion</button>
+    <button id="calibrate" type="button" disabled>Calibrate</button>
     <p>Positive X = right. Positive Y = up. Each component ranges from -1 to 1.</p>
+    <div id="sliders" hidden>
     <p><label>X <input id="x" type="range" min="-1" max="1" step="0.01" value="0" style="width: 70vw; max-width: 400px"></label></p>
     <p><label>Y <input id="y" type="range" min="-1" max="1" step="0.01" value="0" style="width: 70vw; max-width: 400px"></label></p>
+    </div>
     <output id="vector">(0.00, 0.00)</output>
   </fieldset>
   <script type="module" src="./main.ts"></script>

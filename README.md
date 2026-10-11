@@ -148,6 +148,13 @@ screen and does not count as a player.
 Phones should open `http://<laptop-LAN-IP>:5173/`, not localhost. Restart the
 room server after updating so it can send the shared player roster.
 
+The combined lobby also loads the shared 3D maze on the host screen after room
+creation. Joined players select Phone motion, tap **Enable motion**, hold a
+comfortable neutral pose, then tap **Calibrate**. Portrait and either landscape
+side are supported; rotating the screen requires recalibration. Motion requires
+trusted HTTPS on phones. **Slider fallback** works without motion permission.
+The host's team average drives the maze physics, and **New maze** resets the board.
+
 Tiltocracy is built as a real-time multiplayer web experience with a focus on:
 
 - responsive physical input
