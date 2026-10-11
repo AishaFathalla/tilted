@@ -1,6 +1,9 @@
 import type { Player, ServerMessage, Vector } from "../../shared/protocol";
 import { mountMotionControls } from "../controller/controls";
 import { mountReadyButton } from "../controller/ready";
+import { updatePhoneIdentity } from "../controller/phone-view";
+import "../controller/phone-view.css";
+import { createGameAudio } from "../host/audio";
 import type { Maze } from "../host/maze";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
@@ -36,6 +39,15 @@ const mazeLock = document.querySelector<HTMLDivElement>("#maze-lock")!;
 const newMaze = document.querySelector<HTMLButtonElement>("#new-maze")!;
 const restartMaze = document.querySelector<HTMLButtonElement>("#restart-maze")!;
 const timer = document.querySelector<HTMLOutputElement>("#timer")!;
+const audio = createGameAudio();
+const soundToggle = document.querySelector<HTMLButtonElement>("#sound-toggle")!;
+let soundEnabled = true;
+soundToggle.onclick = () => {
+  soundEnabled = !soundEnabled;
+  audio.setEnabled(soundEnabled);
+  soundToggle.textContent = soundEnabled ? "Sound on" : "Sound off";
+  soundToggle.setAttribute("aria-pressed", String(soundEnabled));
+};
 const resultDialog = document.querySelector<HTMLDialogElement>("#round-result")!;
 const resultTitle = document.querySelector<HTMLHeadingElement>("#result-title")!;
 const resultMessage = document.querySelector<HTMLParagraphElement>("#result-message")!;
@@ -50,8 +62,11 @@ let restartCurrentMaze: (() => void) | undefined;
 const readyButton = mountReadyButton(socket, () => playerId);
 resultDialog.oncancel = (event) => event.preventDefault();
 function showResult(won: boolean, seconds?: number) {
-  resultTitle.textContent = won ? "You won!" : "Time's up!";
-  resultMessage.textContent = won ? `Your team finished in ${seconds!.toFixed(1)} seconds.` : "You didn't reach the goal in time. Try again?";
+  audio.finish(won);
+  resultDialog.classList.toggle("won", won);
+  resultDialog.querySelector(".result-emblem")!.textContent = won ? "✦" : "◷";
+  resultTitle.textContent = won ? "Teamwork makes tilt work" : "So close. One more tilt?";
+  resultMessage.textContent = won ? `Maze cleared in ${seconds!.toFixed(1)} seconds.` : "Time's up! Find your rhythm and give this maze another go.";
   mazeStatus.textContent = won ? "Maze complete." : "Round over.";
   if (!resultDialog.open) resultDialog.showModal();
 }
@@ -74,7 +89,9 @@ async function startGame() {
       durationSeconds: ROUND_SECONDS,
       requireReady: true,
       onLost: () => showResult(false),
+      onImpact: (speed) => audio.impact(speed),
       onTick: (remaining, started) => {
+        audio.tick(remaining, started);
         if (started && !roundStarted) {
           roundStarted = true;
           mazeStage.classList.remove("waiting");
@@ -92,6 +109,7 @@ async function startGame() {
       if (!restart || !currentMaze) currentMaze = generateChallengeMaze(Math.floor(Math.random() * 2 ** 32));
       mazeSeed.textContent = String(currentMaze.seed);
       roundStarted = false;
+      audio.reset();
       mazeStage.classList.add("waiting");
       mazeLock.hidden = false;
       resettingReady = !initial;
@@ -135,6 +153,7 @@ function updatePlayerVectors() {
 }
 function renderPlayers(players: Player[]) {
   roster = players;
+  updatePhoneIdentity(players.find((player) => player.id === playerId));
   list.replaceChildren();
   const present = new Set(players.map((player) => player.id));
   for (const id of vectors.keys()) if (!present.has(id)) vectors.delete(id);
@@ -166,6 +185,7 @@ function renderPlayers(players: Player[]) {
 }
 socket.onopen = () => { status.textContent = "Create a room or enter a code to join."; buttons(false); };
 back.onclick = () => {
+  audio.reset();
   game?.stop();
   back.disabled = true;
   if (socket.readyState === WebSocket.CLOSED) {
@@ -178,6 +198,7 @@ back.onclick = () => {
 };
 create.onclick = () => {
   if (socket.readyState !== WebSocket.OPEN || role) return;
+  audio.unlock();
   buttons(true);
   socket.send(JSON.stringify({ type: "create" }));
 };
@@ -198,6 +219,7 @@ socket.onmessage = (event) => {
     void startGame();
   } else if (message.type === "joined") {
     role = "player";
+    document.body.classList.add("playing-phone");
     playerId = message.playerId;
     showRoom(message.room);
     roomNote.textContent = `Joined as ${name.value.trim()}.`;
@@ -237,6 +259,7 @@ function sendVector(value: Vector, showCoordinates = true) {
   socket.send(JSON.stringify({ type: "vec", seq: seq++, ...value }));
 }
 socket.onclose = () => {
+  audio.reset();
   game?.stop();
   restartRound.disabled = nextRound.disabled = true;
   motion.stop();

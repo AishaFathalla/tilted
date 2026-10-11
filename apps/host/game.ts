@@ -20,6 +20,7 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
   requireReady?: boolean;
   onTick: (remaining: number, started: boolean) => void;
   onLost: () => void;
+  onImpact?: (speed: number) => void;
 }) {
   const view = createMazeView(canvas);
   const target = { x: 0, y: 0 };
@@ -79,7 +80,7 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
       boostTarget = teamworkBoost(players.map((player) => player.vector));
     },
     setMaze(maze: Maze) {
-      physics = createMazePhysics(maze);
+      physics = createMazePhysics(maze, options?.onImpact);
       goal = cellCenter(maze.goal, CELL_SIZE);
       steps = 0;
       solved = false;

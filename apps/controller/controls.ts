@@ -1,5 +1,6 @@
 import type { Vector } from "../../shared/protocol";
 import { calibrationFeedback } from "./calibration-feedback";
+import { mountPhoneView } from "./phone-view";
 import { MOTION, motionTarget, screenAngle, smoothVector, type Pose, type ScreenAngle } from "./motion";
 
 // Reuse the controller's sensor flow on the combined lobby page.
@@ -13,6 +14,8 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
   const motionStatus = document.querySelector<HTMLParagraphElement>("#motion-status")!;
   const sliders = document.querySelector<HTMLDivElement>("#sliders")!;
   const confirmation = calibrationFeedback(calibrate, motionStatus);
+  const controlPanel = document.querySelector<HTMLElement>("#controls");
+  const phoneView = controlPanel ? mountPhoneView(controlPanel) : undefined;
   let listening = false;
   let enabling = false;
   let latest: Pose | undefined;
@@ -52,6 +55,8 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     }
     confirmation.reset();
     neutral = undefined;
+    phoneView?.calibrated(false);
+    phoneView?.update({ x: 0, y: 0 });
     calibratedAngle = undefined;
     smoothed = { x: 0, y: 0 };
     x.value = y.value = "0";
@@ -74,6 +79,7 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     if (neutral) {
       // Preserve calibration and quietly stop stale input until readings resume.
       smoothed = { x: 0, y: 0 };
+      phoneView?.update(smoothed);
       sendVector(smoothed, false);
       return;
     }
@@ -108,6 +114,7 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
       motionStatus.textContent = "Hold steady, then calibrate.";
     }
     smoothed = smoothVector(smoothed, motionTarget(latest, neutral ?? { beta: 0, gamma: 0 }, angle));
+    phoneView?.update(smoothed);
     if (neutral) {
       // Keep the saved zero visible; gameplay still receives live relative tilt.
       sendVector(smoothed, false);
@@ -131,7 +138,11 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     updateMotionUI();
   };
   x.oninput = y.oninput = () => {
-    if (mode.value === "sliders") sendVector({ x: Number(x.value), y: Number(y.value) });
+    if (mode.value === "sliders") {
+      const value = { x: Number(x.value), y: Number(y.value) };
+      phoneView?.update(value);
+      sendVector(value);
+    }
   };
   enable.onclick = async () => {
     resetVector();
@@ -169,6 +180,7 @@ export function mountMotionControls(sendVector: (value: Vector, showCoordinates?
     resetVector();
     neutral = { ...latest };
     calibratedAngle = currentScreenAngle();
+    phoneView?.calibrated(true);
     void lockOrientation();
     confirmation.show();
     updateMotionUI();
