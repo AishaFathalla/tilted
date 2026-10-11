@@ -20,8 +20,8 @@ export function createMazeView(canvas: HTMLCanvasElement) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(40, 1, 1, 5000);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a7a66, 1.6));
-  const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+  scene.add(new THREE.HemisphereLight(0xfffdf5, 0x8c9b87, 1.8));
+  const sun = new THREE.DirectionalLight(0xfff6e7, 1.8);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   sun.shadow.bias = -0.0005;
@@ -31,21 +31,28 @@ export function createMazeView(canvas: HTMLCanvasElement) {
   const board = new THREE.Group();
   scene.add(board);
   const box = new THREE.BoxGeometry(1, 1, 1);
-  const floor = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: 0xd9b98a, roughness: 0.8 }));
+  const base = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: 0x71816b, roughness: 0.9 }));
+  base.receiveShadow = true;
+  const floor = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: 0xeee8d9, roughness: 0.9 }));
   floor.receiveShadow = true;
-  const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x7a4a24, roughness: 0.7 });
+  const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x9aaa8e, roughness: 0.85 });
   const walls = new THREE.Group();
   const goal = new THREE.Mesh(
     new THREE.CylinderGeometry(CELL_SIZE * 0.35, CELL_SIZE * 0.35, 1, 32),
-    new THREE.MeshStandardMaterial({ color: 0x2a9d8f, roughness: 0.5 }),
+    new THREE.MeshStandardMaterial({ color: 0x548653, roughness: 0.8 }),
   );
   goal.receiveShadow = true;
+  const goalRing = new THREE.Mesh(
+    new THREE.TorusGeometry(CELL_SIZE * 0.28, 1.2, 8, 32),
+    new THREE.MeshStandardMaterial({ color: 0xe3efd6, roughness: 0.8 }),
+  );
+  goalRing.rotation.x = -Math.PI / 2;
   const ball = new THREE.Mesh(
     new THREE.SphereGeometry(BALL_RADIUS, 32, 16),
-    new THREE.MeshStandardMaterial({ color: 0xe76f51, roughness: 0.3, metalness: 0.1 }),
+    new THREE.MeshStandardMaterial({ color: 0xd95764, roughness: 0.35, metalness: 0.05 }),
   );
   ball.castShadow = true;
-  board.add(floor, walls, goal, ball);
+  board.add(base, floor, walls, goal, goalRing, ball);
   const playerVectors = createPlayerVectors(canvas, board, ball, camera);
 
   let maze: Maze | undefined;
@@ -103,6 +110,8 @@ export function createMazeView(canvas: HTMLCanvasElement) {
       const depth = maze.rows * CELL_SIZE;
       floor.scale.set(width + WALL_THICKNESS, WALL_THICKNESS, depth + WALL_THICKNESS);
       floor.position.set(0, -WALL_THICKNESS / 2, 0);
+      base.scale.set(width + WALL_THICKNESS + 8, WALL_THICKNESS, depth + WALL_THICKNESS + 8);
+      base.position.set(0, -WALL_THICKNESS * 1.5, 0);
 
       walls.clear();
       for (const rect of wallRects(maze, CELL_SIZE, WALL_THICKNESS)) {
@@ -118,6 +127,7 @@ export function createMazeView(canvas: HTMLCanvasElement) {
       const goalCenter = cellCenter(maze.goal, CELL_SIZE);
       const goalPosition = toBoard(goalCenter.x, goalCenter.y);
       goal.position.set(goalPosition.x, 0.5, goalPosition.z);
+      goalRing.position.set(goalPosition.x, 1.1, goalPosition.z);
       const start = cellCenter(maze.start, CELL_SIZE);
       this.setBall(start.x, start.y);
 

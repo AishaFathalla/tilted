@@ -33,6 +33,28 @@ server.on("connection", (socket) => {
     if (typeof message !== "object" || message === null || !("type" in message)) {
       return reject("Invalid message.");
     }
+    if (message.type === "recalibrate") {
+      if (!room || role !== "controller" || !room.players.has(socket)) return reject("Join a room before recalibrating.");
+      for (const player of room.players.values()) player.ready = false;
+      send(room.host, { type: "round_restart" });
+      sendPlayers();
+      return;
+    }
+    if (message.type === "ready") {
+      const player = room?.players.get(socket);
+      if (role !== "controller" || !player) return reject("Join a room before readying up.");
+      if (!("ready" in message) || typeof message.ready !== "boolean") return reject("Ready must be true or false.");
+      player.ready = message.ready;
+      sendPlayers();
+      return;
+    }
+    if (message.type === "reset_ready") {
+      if (!room || room.host !== socket) return reject("Only the host can reset readiness.");
+      for (const player of room.players.values()) player.ready = false;
+      send(socket, { type: "ready_reset" });
+      sendPlayers();
+      return;
+    }
     if (message.type === "vec") {
       const player = room?.players.get(socket);
       if (role !== "controller" || !room || !player) {
@@ -70,7 +92,7 @@ server.on("connection", (socket) => {
     if (!room || message.room.trim() !== room.code) return reject("Room not found.");
     const used = new Set([...room.players.values()].map((player) => player.color));
     const color = colors.find((candidate) => !used.has(candidate)) ?? `hsl(${(colorSequence++ * 137.5) % 360} 55% 45%)`;
-    const player = { id: randomUUID(), name: message.name.trim(), color };
+    const player = { id: randomUUID(), name: message.name.trim(), color, ready: false };
     role = "controller";
     room.players.set(socket, player);
     send(socket, { type: "joined", room: room.code, playerId: player.id });

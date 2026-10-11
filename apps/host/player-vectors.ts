@@ -18,7 +18,7 @@ export function createPlayerVectors(canvas: HTMLCanvasElement, board: THREE.Grou
   const group = document.createElementNS(namespace, "g");
   overlay.append(group);
   wrapper.append(overlay);
-  const entries = new Map<string, { path: SVGPathElement; player: PlayerInput }>();
+  const entries = new Map<string, { path: SVGPathElement; halo: SVGPathElement; player: PlayerInput }>();
   const center = new THREE.Vector3();
   const edge = new THREE.Vector3();
   const endpoint = new THREE.Vector3();
@@ -28,22 +28,27 @@ export function createPlayerVectors(canvas: HTMLCanvasElement, board: THREE.Grou
     update(players: PlayerInput[]) {
       const present = new Set(players.map((player) => player.id));
       for (const [id, entry] of entries) {
-        if (!present.has(id)) { entry.path.remove(); entries.delete(id); }
+        if (!present.has(id)) { entry.path.remove(); entry.halo.remove(); entries.delete(id); }
       }
       for (const player of players) {
         let entry = entries.get(player.id);
         if (!entry) {
           const path = document.createElementNS(namespace, "path");
-          path.setAttribute("fill", "none");
-          path.setAttribute("stroke-width", "1.5");
+          path.setAttribute("stroke-width", ".5");
           path.setAttribute("stroke-linecap", "round");
           path.setAttribute("stroke-linejoin", "round");
-          group.append(path);
-          entry = { path, player };
+          const halo = path.cloneNode() as SVGPathElement;
+          halo.setAttribute("stroke", "#fff");
+          halo.setAttribute("fill", "#fff");
+          halo.setAttribute("stroke-width", "2");
+          halo.setAttribute("stroke-opacity", ".7");
+          group.append(halo, path);
+          entry = { path, halo, player };
           entries.set(player.id, entry);
         }
         entry.player = player;
         entry.path.setAttribute("stroke", player.color);
+        entry.path.setAttribute("fill", player.color);
       }
       overlay.toggleAttribute("hidden", players.length === 0);
     },
@@ -61,20 +66,22 @@ export function createPlayerVectors(canvas: HTMLCanvasElement, board: THREE.Grou
       const radius = Math.max(4, Math.abs(edge.x - center.x) * width / 2);
       group.setAttribute("transform", `translate(${(center.x + 1) * width / 2} ${(1 - center.y) * height / 2})`);
       let index = 0;
-      for (const { path, player } of entries.values()) {
+      for (const { path, halo, player } of entries.values()) {
         const magnitude = Math.hypot(player.vector.x, player.vector.y);
-        if (magnitude < .03) { path.setAttribute("d", ""); index++; continue; }
+        if (magnitude < .03) { path.setAttribute("d", ""); halo.setAttribute("d", ""); index++; continue; }
         // Project a board-space input so the 2D arrow agrees with the visible maze.
         endpoint.copy(ball.position).add(new THREE.Vector3(player.vector.x * CELL_SIZE, 0, -player.vector.y * CELL_SIZE));
         board.localToWorld(endpoint).project(camera);
         const angle = Math.atan2(-(endpoint.y - center.y) * height, (endpoint.x - center.x) * width);
         const dx = Math.cos(angle), dy = Math.sin(angle);
-        const lane = Math.max(-6, Math.min(6, (index - (entries.size - 1) / 2) * 3));
+        const lane = Math.max(-12, Math.min(12, (index - (entries.size - 1) / 2) * 5));
         const startX = dx * (radius + 8) - dy * lane;
         const startY = dy * (radius + 8) + dx * lane;
-        const length = 5 + Math.min(magnitude, 1) * 8;
-        const x = startX + dx * length, y = startY + dy * length;
-        path.setAttribute("d", `M${startX} ${startY}L${x} ${y}M${x - 3.5 * Math.cos(angle - .55)} ${y - 3.5 * Math.sin(angle - .55)}L${x} ${y}L${x - 3.5 * Math.cos(angle + .55)} ${y - 3.5 * Math.sin(angle + .55)}`);
+        // A compact pointer, without a shaft or changing length.
+        const x = startX + dx * 7, y = startY + dy * 7;
+        path.setAttribute("d", `M${x} ${y}L${startX - dy * 3} ${startY + dx * 3}L${startX + dy * 3} ${startY - dx * 3}Z`);
+        halo.setAttribute("d", path.getAttribute("d")!);
+        path.setAttribute("opacity", String(.55 + .3 * Math.min(magnitude, 1)));
         index++;
       }
     },

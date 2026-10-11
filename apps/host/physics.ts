@@ -1,7 +1,8 @@
-import { Bodies, Body, Composite, Engine } from "matter-js";
+import Matter from "matter-js";
 import type { Vector } from "../../shared/protocol";
 import { BALL_RADIUS, CELL_SIZE, WALL_THICKNESS } from "./dimensions";
 import { cellCenter, wallRects, type Maze } from "./maze";
+const { Bodies, Body, Composite, Engine } = Matter;
 
 /** Fixed physics step; Matter.js behaves consistently only with a constant delta. */
 export const STEP_MS = 1000 / 60;
@@ -9,8 +10,8 @@ export const STEP_MS = 1000 / 60;
  * Matter.js gravity magnitude at full tilt (1 = Matter's default "full screen" gravity). Gravity scales
  * linearly with the tilt vector, so ball speed does too; raise this (or lower ROLLING_RESISTANCE) to go faster.
  */
-const GRAVITY = 0.7;
-/** Matter frictionAir: velocity lost per step. With GRAVITY it sets top speed (~7.3 cells/s at full tilt) and how quickly the ball gets there (~1 s). */
+const GRAVITY = 0.9;
+/** Matter frictionAir: velocity lost per step; balances acceleration and braking. */
 const ROLLING_RESISTANCE = 0.04;
 /**
  * Hard speed cap in world units per step. Matter only checks collisions once per step, so the ball must
@@ -38,11 +39,12 @@ export function createMazePhysics(maze: Maze) {
       return { x: ball.position.x, y: ball.position.y };
     },
     /** Advances one STEP_MS with the board tilted by `tilt` (control space: +y is north, i.e. world -y). */
-    step(tilt: Vector) {
-      engine.gravity.x = tilt.x * GRAVITY;
-      engine.gravity.y = -tilt.y * GRAVITY;
+    step(tilt: Vector, accelerationBoost = 1) {
+      engine.gravity.x = tilt.x * GRAVITY * accelerationBoost;
+      engine.gravity.y = -tilt.y * GRAVITY * accelerationBoost;
       if (Body.getSpeed(ball) > MAX_SPEED) Body.setSpeed(ball, MAX_SPEED);
       Engine.update(engine, STEP_MS);
+      if (Body.getSpeed(ball) > MAX_SPEED) Body.setSpeed(ball, MAX_SPEED);
     },
   };
 }

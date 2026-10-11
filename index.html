@@ -12,7 +12,7 @@
           <path d="M18 6V30H30V18H46V42H34V58M6 42H22V58M46 30H58"/>
         </g>
       </g>
-      <circle cx="74" cy="48" r="4" fill="#fff" stroke="currentColor" stroke-width="2"/>
+      <circle cx="74" cy="48" r="4" fill="#d95764" stroke="#a53e49" stroke-width="1.5"/>
       <g fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
         <path d="M45 36L26 24M27 32L26 24L34 23" stroke="#d95764"/>
         <path d="M101 68L120 80M112 81L120 80L119 72" stroke="#4885ce"/>
@@ -20,7 +20,7 @@
         <path d="M89 27L102 12M94 13L102 12L102 20" stroke="#b08a24"/>
       </g>
     </svg>
-    <span>Tilted</span>
+    <span class="logo-text"><span class="slogan">don't be</span><span class="logo-name">Tilted</span></span>
   </h1>
   <p id="status" role="status">Connecting...</p>
   <div class="layout">
@@ -35,26 +35,30 @@
           <button id="submit" disabled>Join room</button>
         </form>
       </div>
-      <div id="room-info" hidden><button id="back" class="back-button" type="button" hidden>← Back</button><h2>Room <span id="room-code"></span></h2><p id="room-note"></p><p class="hint">Open this same page on your phones. Use the laptop's network IP instead of localhost.</p></div>
+      <div id="room-info" hidden><button id="back" class="back-button" type="button" hidden>← Back</button><h2>Room <span id="room-code"></span></h2><p id="room-note"></p></div>
       <fieldset id="controls" hidden disabled>
         <legend>Your controls</legend>
         <label for="mode">Input mode</label>
         <select id="mode"><option value="motion">Phone motion</option><option value="sliders">Slider fallback</option></select>
-        <p class="hint">Hold your phone comfortably in portrait or either landscape direction. Enable motion, then calibrate. Recalibrate if you rotate the screen.</p>
-        <p id="motion-status" role="status">Tap Enable motion, then calibrate.</p>
+        <p id="motion-status" role="status">Hold steady and enable motion.</p>
         <div class="motion-actions"><button id="enable-motion" type="button">Enable motion</button><button id="calibrate" type="button" disabled>Calibrate</button></div>
+        <button id="ready" type="button" aria-pressed="false">Ready</button>
+        <p class="hint">Everyone ready? Game on.</p>
         <div id="sliders" hidden><label for="x">Left / Right</label><input id="x" type="range" min="-1" max="1" step="0.01" value="0"><label for="y">Down / Up</label><input id="y" type="range" min="-1" max="1" step="0.01" value="0"></div>
         <output id="vector">(0.00, 0.00)</output>
       </fieldset>
       <p id="team" hidden>Team direction: <output id="mean">(0.00, 0.00)</output></p>
     </section>
-    <section class="panel" aria-labelledby="players-heading"><h2 id="players-heading">Players <span id="count">0</span></h2><p id="empty" class="hint">Players will appear here when they join.</p><ul id="players"></ul></section>
+    <section class="panel" aria-labelledby="players-heading"><h2 id="players-heading">Players <span id="count">0</span></h2><p id="empty" class="hint">Waiting for friends…</p><ul id="players"></ul></section>
   </div>
   <section id="game-panel" class="panel" hidden aria-labelledby="maze-heading">
-    <div class="maze-heading"><h2 id="maze-heading">Maze</h2><span class="round-timer">Time left <output id="timer">2:00</output></span><button id="new-maze" type="button">Next maze</button></div>
+    <div class="maze-heading"><h2 id="maze-heading">Maze</h2><span class="round-timer">Time left <output id="timer">3:00</output></span><button id="restart-maze" type="button" disabled>Restart maze</button><button id="new-maze" type="button">Next maze</button></div>
     <p id="maze-status" role="status">Waiting for the board...</p>
-    <canvas id="maze" aria-label="Shared maze board">Your browser needs WebGL to display the maze.</canvas>
-    <p class="hint">Seed: <span id="maze-seed"></span></p>
+    <div id="maze-stage" class="maze-stage waiting">
+      <canvas id="maze" aria-label="Shared maze board">Your browser needs WebGL to display the maze.</canvas>
+      <div id="maze-lock" class="maze-lock"><strong>Waiting for players to ready up…</strong></div>
+    </div>
+    <p class="hint" hidden>Seed: <span id="maze-seed"></span></p>
   </section>
   <dialog id="round-result" aria-labelledby="result-title" aria-describedby="result-message">
     <h2 id="result-title"></h2><p id="result-message"></p>

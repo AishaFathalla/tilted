@@ -2,3 +2,4 @@ notes/
 .DS_Store
 node_modules/
 dist/
+room-server*.log

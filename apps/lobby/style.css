@@ -1,57 +1,93 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;700&display=swap');
 
+:root { color-scheme: light; --ink: #30372f; --muted: #6c746a; --line: #dfe3da; --green: #567c46; --soft: #f4f6f0; }
 * { box-sizing: border-box; }
-body { margin: 0; background: #f3f3f3; color: #333; font: 14px Arial, sans-serif; }
-main { max-width: 760px; padding: 24px; margin: auto; }
-h1 { margin: 0 0 16px; font-size: 28px; }
-.logo { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+body { margin: 0; background: #f0f2eb; color: var(--ink); font: 14px/1.5 Arial, sans-serif; }
+main { max-width: 800px; padding: 32px 24px; margin: auto; }
+h1, h2, p { margin-top: 0; }
+h2 { margin-bottom: 18px; font-size: 17px; line-height: 1.3; }
+.logo { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font-size: 36px; }
 .logo svg { display: block; width: 88px; height: 64px; flex-shrink: 0; }
-.logo span { font-family: 'Chakra Petch', 'Courier New', monospace; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-h2 { margin: 0 0 18px; font-size: 18px; }
-#status { min-height: 20px; color: #666; line-height: 1.5; }
-.layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
-.panel { background: white; padding: 20px; border: 1px solid #ddd; border-radius: 5px; min-width: 0; }
-label { display: block; margin: 12px 0 6px; }
-input:not([type=range]) { width: 100%; padding: 9px; border: 1px solid #bbb; border-radius: 3px; font: inherit; }
-button { width: 100%; padding: 10px; border: 1px solid #497d39; background: #639e50; color: white; border-radius: 3px; cursor: pointer; font: bold 14px Arial, sans-serif; }
-button:hover { background: #548c43; }
+.logo-text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.logo-name { font-family: 'Chakra Petch', 'Courier New', monospace; font-weight: 700; letter-spacing: 1px; line-height: 1.1; text-transform: uppercase; }
+.slogan { color: var(--muted); font: 400 11px/1.3 'Chakra Petch', 'Courier New', monospace; letter-spacing: 1.4px; margin-left: 2px; }
+#status { min-height: 21px; margin-bottom: 22px; color: var(--muted); font-size: 13px; }
+.layout { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; align-items: start; }
+.panel { background: #fff; padding: 24px; border: 1px solid var(--line); border-radius: 10px; min-width: 0; box-shadow: 0 2px 0 #30372f05; }
+label { display: block; margin: 14px 0 6px; font-size: 13px; font-weight: 600; }
+input:not([type=range]), select { width: 100%; min-height: 44px; padding: 10px 12px; background: #fff; color: var(--ink); border: 1px solid #ccd3c6; border-radius: 6px; font: inherit; }
+#code { font-variant-numeric: tabular-nums; letter-spacing: 3px; }
+button { width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid var(--green); background: var(--green); color: white; border-radius: 6px; cursor: pointer; font: 600 14px/1.4 Arial, sans-serif; transition: background-color .15s, border-color .15s; }
+button:hover:not(:disabled) { background: #456738; border-color: #456738; }
 button:disabled { opacity: .5; cursor: default; }
-.back-button { width: auto; padding: 6px 10px; margin-bottom: 16px; background: #fff; color: #555; border-color: #ccc; font-weight: normal; }
-.back-button:hover { background: #eee; }
-form button { margin-top: 16px; }
-.separator { text-align: center; color: #888; margin: 18px 0; }
-.hint { color: #777; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
-#count { float: right; font-size: 14px; color: #777; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #9bb88d; outline-offset: 3px; }
+form button { margin-top: 20px; }
+.separator { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; margin: 22px 0 4px; }
+.separator::before, .separator::after { content: ''; height: 1px; background: var(--line); flex: 1; }
+.hint { color: var(--muted); font-size: 12px; line-height: 1.65; overflow-wrap: anywhere; }
+.panel > .hint:last-child { margin-bottom: 0; }
+#players-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#count { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 7px; background: var(--soft); color: var(--muted); font-size: 12px; font-weight: normal; border-radius: 6px; }
+#empty { margin: 0; padding: 24px 16px; text-align: center; border: 1px dashed var(--line); border-radius: 6px; }
 #players { list-style: none; padding: 0; margin: 0; }
-#players li { display: flex; align-items: center; gap: 10px; padding: 12px 0; overflow-wrap: anywhere; }
-#players li + li { border-top: 1px solid #eee; }
-.dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
-fieldset { margin: 20px 0 0; border: 1px solid #ddd; padding: 12px; min-width: 0; }
-input[type=range] { width: 100%; min-height: 30px; }
+#players li { display: flex; align-items: center; gap: 10px; padding: 13px 0; overflow-wrap: anywhere; }
+#players li:first-child { padding-top: 2px; }
+#players li:last-child { padding-bottom: 2px; }
+#players li + li { border-top: 1px solid #edf0e9; }
+#players li > span:nth-child(2) { min-width: 0; }
+.dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+.player-ready { margin-left: auto; padding: 3px 7px; background: var(--soft); color: var(--muted); border-radius: 4px; font-size: 11px; flex-shrink: 0; }
+.player-ready.is-ready { color: #456738; background: #eaf2e4; }
+.back-button, .secondary-button, #enable-motion, #calibrate, #new-maze { background: #fff; color: var(--ink); border-color: #ccd3c6; }
+.back-button:hover:not(:disabled), .secondary-button:hover:not(:disabled), #enable-motion:hover:not(:disabled), #calibrate:hover:not(:disabled), #new-maze:hover:not(:disabled) { background: var(--soft); border-color: #adbba3; }
+.back-button { width: auto; min-height: 34px; padding: 5px 10px; margin-bottom: 18px; font-size: 12px; font-weight: normal; }
+#room-info h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+#room-code { display: inline-block; padding: 5px 10px; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; font: 700 21px/1.3 'Chakra Petch', monospace; letter-spacing: 3px; }
+#room-note { margin-bottom: 10px; }
+fieldset { margin: 20px 0 0; border: 1px solid var(--line); border-radius: 7px; padding: 14px; min-width: 0; }
+legend { padding: 0 6px; font-size: 13px; font-weight: bold; }
+fieldset > label:first-of-type { margin-top: 4px; }
+input[type=range] { width: 100%; min-height: 36px; accent-color: var(--green); }
 output { font-variant-numeric: tabular-nums; }
-#vector { display: block; text-align: center; margin-top: 12px; }
+#vector { display: block; text-align: center; margin-top: 14px; color: var(--muted); font: 12px/1.5 monospace; }
 [hidden] { display: none !important; }
 .motion-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.motion-actions button { flex: 1; width: auto; }
-select { width: 100%; min-height: 40px; padding: 8px; font: inherit; }
-#motion-status { font-size: 13px; line-height: 1.5; }
-#game-panel { margin-top: 18px; }
+.motion-actions button { flex: 1; width: auto; padding-inline: 8px; font-size: 13px; }
+#ready { margin-top: 10px; }
+#ready[aria-pressed=true] { background: #eaf2e4; border-color: #b6cdaa; color: #456738; }
+#ready[aria-pressed=true]:hover:not(:disabled) { background: #dfead7; }
+#motion-status { font-size: 12px; line-height: 1.6; padding: 10px 12px; background: var(--soft); border-radius: 5px; }
+#team { margin: 18px 0 0; color: var(--muted); font-size: 12px; }
+#game-panel { margin-top: 20px; }
 .maze-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .maze-heading h2 { margin: 0; }
-#new-maze { width: auto; }
-#maze-status { font-size: 13px; line-height: 1.5; }
-#maze { display: block; width: 100%; height: clamp(360px, 62vw, 720px); }
+#new-maze, #restart-maze { width: auto; min-height: 36px; padding: 7px 12px; font-size: 12px; }
+#restart-maze { background: #fff; color: var(--ink); border-color: #ccd3c6; }
+#restart-maze:hover:not(:disabled) { background: var(--soft); border-color: #adbba3; }
+#maze-status { margin: 14px 0; color: var(--muted); font-size: 13px; }
+#maze { display: block; width: 100%; height: clamp(360px, 62vw, 720px); border-radius: 6px; background: #f8f9f5; }
+.maze-stage { position: relative; border-radius: 6px; overflow: hidden; background: var(--soft); }
+.maze-stage.waiting canvas { filter: blur(8px); opacity: .5; }
+.maze-stage.waiting .ball-input-overlay { visibility: hidden; }
+.maze-lock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; background: #f4f6f040; }
+.maze-lock strong { font-size: 18px; }
+.maze-lock span { color: var(--muted); font-size: 13px; }
 main.hosting { max-width: 1200px; }
 .hosting .layout { grid-template-columns: 1fr 1fr; }
-.round-timer { margin-left: auto; font-size: 13px; color: #666; }
-#timer { display: inline-block; margin-left: 6px; font-size: 22px; font-weight: bold; color: #333; }
-#timer.urgent { color: #bd3b3b; }
-#round-result { width: min(400px, calc(100% - 36px)); padding: 28px; border: 1px solid #ccc; border-radius: 6px; color: #333; }
-#round-result::backdrop { background: #0006; }
+.round-timer { display: flex; align-items: center; gap: 10px; margin-left: auto; font-size: 12px; color: var(--muted); }
+#timer { display: inline-block; min-width: 68px; padding: 3px 10px; background: var(--soft); border: 1px solid var(--line); border-radius: 6px; font-size: 21px; font-weight: bold; text-align: center; color: var(--ink); }
+#timer.urgent { color: #b34444; background: #fff0ed; border-color: #ebc5bf; }
+#round-result { width: min(400px, calc(100% - 36px)); padding: 28px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); }
+#round-result::backdrop { background: #222b2466; }
 #round-result h2 { font-size: 26px; margin-bottom: 12px; }
-#result-message { line-height: 1.6; color: #666; }
+#result-message { line-height: 1.6; color: var(--muted); }
 .result-actions { display: grid; gap: 10px; margin-top: 22px; }
-.secondary-button { background: #fff; color: #555; border-color: #ccc; }
-.secondary-button:hover { background: #eee; }
-@media (max-width: 550px) { .hosting .layout { grid-template-columns: 1fr; } .maze-heading { flex-wrap: wrap; } #maze { height: 380px; } }
-@media (max-width: 550px) { .layout { grid-template-columns: 1fr; } main { padding: 18px; } }
+@media (max-width: 550px) {
+  main { padding: 20px 16px; }
+  .layout, .hosting .layout { grid-template-columns: 1fr; gap: 16px; }
+  .panel { padding: 20px; }
+  .logo { font-size: 32px; }
+  .maze-heading { flex-wrap: wrap; }
+  #maze { height: 380px; }
+}
+@media (prefers-reduced-motion: reduce) { button { transition: none; } }
