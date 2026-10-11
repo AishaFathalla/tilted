@@ -17,9 +17,10 @@ const roomInfo = document.querySelector<HTMLDivElement>("#room-info")!;
 const roomCode = document.querySelector<HTMLSpanElement>("#room-code")!;
 const roomNote = document.querySelector<HTMLParagraphElement>("#room-note")!;
 const back = document.querySelector<HTMLButtonElement>("#back")!;
+const playersPanel = document.querySelector<HTMLElement>("#players-panel")!;
 const list = document.querySelector<HTMLUListElement>("#players")!;
-const count = document.querySelector<HTMLSpanElement>("#count")!;
-const empty = document.querySelector<HTMLParagraphElement>("#empty")!;
+const count = document.querySelector<HTMLElement>("#count")!;
+const empty = document.querySelector<HTMLElement>("#empty")!;
 const controls = document.querySelector<HTMLFieldSetElement>("#controls")!;
 const vector = document.querySelector<HTMLOutputElement>("#vector")!;
 const team = document.querySelector<HTMLParagraphElement>("#team")!;
@@ -153,8 +154,8 @@ function updatePlayerVectors() {
 }
 function renderPlayers(players: Player[]) {
   roster = players;
-  updatePhoneIdentity(players.find((player) => player.id === playerId));
   list.replaceChildren();
+  updatePhoneIdentity(players.find((player) => player.id === playerId));
   const present = new Set(players.map((player) => player.id));
   for (const id of vectors.keys()) if (!present.has(id)) vectors.delete(id);
   for (const player of players) {
@@ -165,7 +166,7 @@ function renderPlayers(players: Player[]) {
     dot.style.backgroundColor = player.color;
     dot.setAttribute("aria-hidden", "true");
     const label = document.createElement("span");
-    label.textContent = player.name + (player.id === playerId ? " (you)" : "");
+    label.textContent = player.name;
     const readiness = document.createElement("span");
     readiness.className = `player-ready${player.ready ? " is-ready" : ""}`;
     readiness.textContent = player.ready ? "Ready" : "Not ready";
@@ -183,7 +184,7 @@ function renderPlayers(players: Player[]) {
   }
   renderMean();
 }
-socket.onopen = () => { status.textContent = "Create a room or enter a code to join."; buttons(false); };
+socket.onopen = () => { status.textContent = ""; buttons(false); };
 back.onclick = () => {
   audio.reset();
   game?.stop();
@@ -212,6 +213,7 @@ socket.onmessage = (event) => {
   const message: ServerMessage = JSON.parse(event.data);
   if (message.type === "created") {
     role = "host";
+    playersPanel.hidden = false;
     back.hidden = false;
     showRoom(message.room);
     roomNote.textContent = "Share this code with friends.";
