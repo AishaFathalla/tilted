@@ -1,6 +1,6 @@
 import type { ServerMessage, Vector } from "../../shared/protocol";
 import { createGame } from "./game";
-import { generateMaze } from "./maze";
+import { generateChallengeMaze } from "./maze";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
 const create = document.querySelector<HTMLButtonElement>("#create")!;
@@ -59,6 +59,7 @@ function render() {
   mean.textContent = `(${value.x.toFixed(2)}, ${value.y.toFixed(2)})`;
   drawArrow(meanArrow, value);
   game.setTeamVector(value);
+  game.setPlayerVectors([...players].map(([id, player]) => ({ id, name: player.name, color: player.color, vector: player.vector })));
 }
 const mazeSeed = document.querySelector<HTMLSpanElement>("#maze-seed")!;
 const mazeStatus = document.querySelector<HTMLParagraphElement>("#maze-status")!;
@@ -67,7 +68,7 @@ const game = createGame(document.querySelector<HTMLCanvasElement>("#maze")!, (se
   mazeStatus.textContent = `Goal reached in ${seconds.toFixed(1)} s!`;
 });
 function showNewMaze() {
-  const maze = generateMaze(12, 8, Math.floor(Math.random() * 2 ** 32));
+  const maze = generateChallengeMaze(Math.floor(Math.random() * 2 ** 32));
   mazeSeed.textContent = String(maze.seed);
   mazeStatus.textContent = "Tilt together to roll the ball to the green goal.";
   game.setMaze(maze);
@@ -87,7 +88,7 @@ socket.onmessage = (event) => {
     room.textContent = `Room code: ${message.room}. Phones: ${location.origin}/apps/controller/`;
   } else if (message.type === "player_joined") {
     const item = document.createElement("li");
-    players.set(message.player.id, { item, name: message.player.name, vector: { x: 0, y: 0 }, color: nextPlayerColor() });
+    players.set(message.player.id, { item, name: message.player.name, vector: { x: 0, y: 0 }, color: message.player.color ?? nextPlayerColor() });
     list.append(item);
     render();
   } else if (message.type === "player_left") {

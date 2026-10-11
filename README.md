@@ -155,6 +155,12 @@ side are supported; rotating the screen requires recalibration. Motion requires
 trusted HTTPS on phones. **Slider fallback** works without motion permission.
 The host's team average drives the maze physics, and **New maze** resets the board.
 
+On the combined lobby, rounds have a two-minute limit starting with the first
+nonzero team input. A win or timeout freezes the ball and opens the result menu.
+**Restart** retries the same maze, **Next maze** generates a new board, and
+**Exit** closes the hosted room and returns to the menu. The duration is configured
+by `ROUND_SECONDS` in `apps/lobby/main.ts`.
+
 Tiltocracy is built as a real-time multiplayer web experience with a focus on:
 
 - responsive physical input

@@ -3,6 +3,7 @@ import { CELL_SIZE } from "./dimensions";
 import { createMazeView } from "./draw";
 import { cellCenter, type Maze } from "./maze";
 import { createMazePhysics, STEP_MS } from "./physics";
+import { createRound } from "./round";
 
 const TILT_EASING = 0.15; // fraction of the remaining tilt applied per physics step
 const GOAL_RADIUS = CELL_SIZE * 0.35; // matches the drawn goal disc
@@ -12,7 +13,11 @@ const MAX_CATCH_UP_MS = 250; // after a stalled tab, skip ahead instead of simul
  * Runs the maze: eases the board toward the team vector, steps physics at a fixed rate with that same
  * eased tilt (so the ball rolls the way the board visibly leans), and reports when the goal is reached.
  */
-export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number) => void) {
+export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number) => void, options?: {
+  durationSeconds?: number;
+  onTick: (remaining: number, started: boolean) => void;
+  onLost: () => void;
+}) {
   const view = createMazeView(canvas);
   const target = { x: 0, y: 0 };
   const tilt = { x: 0, y: 0 };
@@ -20,6 +25,8 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
   let goal = { x: 0, y: 0 };
   let steps = 0; // counted from the first non-neutral team vector
   let solved = false;
+  const round = options ? createRound(options.durationSeconds ?? 120) : undefined;
+  let frameTime = performance.now();
 
   function step() {
     tilt.x += (target.x - tilt.x) * TILT_EASING;
@@ -31,13 +38,20 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
     const ball = physics.ball;
     if (Math.hypot(ball.x - goal.x, ball.y - goal.y) < GOAL_RADIUS) {
       solved = true;
-      onSolved((steps * STEP_MS) / 1000);
+      const result = round?.win(frameTime);
+      if (!result || result.state === "won") onSolved(result?.elapsed ?? (steps * STEP_MS) / 1000);
     }
   }
 
   let last = performance.now();
   let pending = 0;
   function frame(now: number) {
+    frameTime = now;
+    if (physics && round && !solved) {
+      const result = round.advance(now, Boolean(target.x || target.y));
+      options!.onTick(result.remaining, result.state !== "waiting");
+      if (result.state === "lost") { solved = true; options!.onLost(); }
+    }
     pending = Math.min(pending + now - last, MAX_CATCH_UP_MS);
     last = now;
     for (; pending >= STEP_MS; pending -= STEP_MS) step();
@@ -49,11 +63,17 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
   requestAnimationFrame(frame);
 
   return {
+    setPlayerVectors: view.setPlayerVectors,
     setMaze(maze: Maze) {
       physics = createMazePhysics(maze);
       goal = cellCenter(maze.goal, CELL_SIZE);
       steps = 0;
       solved = false;
+      tilt.x = tilt.y = 0;
+      pending = 0;
+      last = performance.now();
+      round?.reset();
+      options?.onTick(options.durationSeconds ?? 120, false);
       view.setMaze(maze);
     },
     /** Team vector, components in [-1, 1]. */
@@ -61,5 +81,6 @@ export function createGame(canvas: HTMLCanvasElement, onSolved: (seconds: number
       target.x = vector.x;
       target.y = vector.y;
     },
+    stop() { solved = true; round?.stop(); target.x = target.y = 0; },
   };
 }
