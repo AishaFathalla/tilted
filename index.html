@@ -51,9 +51,13 @@
     <section class="panel" aria-labelledby="players-heading"><h2 id="players-heading">Players <span id="count">0</span></h2><p id="empty" class="hint">Players will appear here when they join.</p><ul id="players"></ul></section>
   </div>
   <section id="game-panel" class="panel" hidden aria-labelledby="maze-heading">
-    <div class="maze-heading"><h2 id="maze-heading">Maze</h2><button id="new-maze" type="button">New maze</button></div>
+    <div class="maze-heading"><h2 id="maze-heading">Maze</h2><span class="round-timer">Time left <output id="timer">2:00</output></span><button id="new-maze" type="button">Next maze</button></div>
     <p id="maze-status" role="status">Waiting for the board...</p>
     <canvas id="maze" aria-label="Shared maze board">Your browser needs WebGL to display the maze.</canvas>
     <p class="hint">Seed: <span id="maze-seed"></span></p>
   </section>
+  <dialog id="round-result" aria-labelledby="result-title" aria-describedby="result-message">
+    <h2 id="result-title"></h2><p id="result-message"></p>
+    <div class="result-actions"><button id="restart-round" type="button" autofocus>Restart</button><button id="next-round" type="button">Next maze</button><button id="exit-round" class="secondary-button" type="button">Exit</button></div>
+  </dialog>
 </main><script type="module" src="/apps/lobby/main.ts"></script></body></html>

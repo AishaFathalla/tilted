@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { Vector } from "../../shared/protocol";
 import { BALL_RADIUS, CELL_SIZE, WALL_HEIGHT, WALL_THICKNESS } from "./dimensions";
 import { cellCenter, wallRects, type Maze } from "./maze";
+import { createPlayerVectors } from "./player-vectors";
 
 const MAX_TILT = 0.35; // radians (~20°) at a full-strength tilt; visual only, ball speed is set in physics.ts
 const CAMERA_ANGLE = 0.55; // radians from straight overhead, looking north
@@ -45,6 +46,7 @@ export function createMazeView(canvas: HTMLCanvasElement) {
   );
   ball.castShadow = true;
   board.add(floor, walls, goal, ball);
+  const playerVectors = createPlayerVectors(canvas, board, ball, camera);
 
   let maze: Maze | undefined;
   // Converts maze world coordinates to board-local coordinates.
@@ -94,6 +96,7 @@ export function createMazeView(canvas: HTMLCanvasElement) {
   new ResizeObserver(fitCamera).observe(canvas);
 
   return {
+    setPlayerVectors: playerVectors.update,
     setMaze(next: Maze) {
       maze = next;
       const width = maze.cols * CELL_SIZE;
@@ -135,6 +138,7 @@ export function createMazeView(canvas: HTMLCanvasElement) {
       board.rotation.x = -tilt.y * MAX_TILT;
     },
     render() {
+      playerVectors.followBall();
       renderer.render(scene, camera);
     },
   };

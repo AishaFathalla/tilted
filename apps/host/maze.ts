@@ -66,6 +66,20 @@ export function generateMaze(cols: number, rows: number, seed = Date.now()): Maz
   return maze;
 }
 
+/** Larger challenge board: the start and goal span the maze's longest route. */
+export function generateChallengeMaze(seed = Date.now()): Maze {
+  const maze = generateMaze(20, 14, seed);
+  // The generator makes a tree, so two farthest-point searches find its diameter.
+  maze.start = { ...maze.goal };
+  const distances = distancesFrom(maze, maze.start);
+  let farthest = 0;
+  for (let cell = 1; cell < distances.length; cell++) {
+    if (distances[cell] > distances[farthest]) farthest = cell;
+  }
+  maze.goal = { col: farthest % maze.cols, row: Math.floor(farthest / maze.cols) };
+  return maze;
+}
+
 /** Cells reachable from `cell` in one step (no wall in between). */
 export function openNeighbors(maze: Maze, { col, row }: Cell): Cell[] {
   const { cols, rows, east, south } = maze;

@@ -1,5 +1,6 @@
 import type { Player, ServerMessage, Vector } from "../../shared/protocol";
 import { mountMotionControls } from "../controller/controls";
+import type { Maze } from "../host/maze";
 
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
 const setup = document.querySelector<HTMLDivElement>("#setup")!;
@@ -25,32 +26,64 @@ let playerId: string | null = null;
 let closedRoom = false;
 let seq = 0;
 const vectors = new Map<string, Vector>();
+let roster: Player[] = [];
 const gamePanel = document.querySelector<HTMLElement>("#game-panel")!;
 const mazeStatus = document.querySelector<HTMLParagraphElement>("#maze-status")!;
 const mazeSeed = document.querySelector<HTMLSpanElement>("#maze-seed")!;
 const newMaze = document.querySelector<HTMLButtonElement>("#new-maze")!;
+const timer = document.querySelector<HTMLOutputElement>("#timer")!;
+const resultDialog = document.querySelector<HTMLDialogElement>("#round-result")!;
+const resultTitle = document.querySelector<HTMLHeadingElement>("#result-title")!;
+const resultMessage = document.querySelector<HTMLParagraphElement>("#result-message")!;
+const restartRound = document.querySelector<HTMLButtonElement>("#restart-round")!;
+const nextRound = document.querySelector<HTMLButtonElement>("#next-round")!;
+const exitRound = document.querySelector<HTMLButtonElement>("#exit-round")!;
+const ROUND_SECONDS = 120;
+let currentMaze: Maze | undefined;
+resultDialog.oncancel = (event) => event.preventDefault();
+function showResult(won: boolean, seconds?: number) {
+  resultTitle.textContent = won ? "You won!" : "Time's up!";
+  resultMessage.textContent = won ? `Your team finished in ${seconds!.toFixed(1)} seconds.` : "You didn't reach the goal in time. Try again?";
+  mazeStatus.textContent = won ? "Maze complete." : "Round over.";
+  if (!resultDialog.open) resultDialog.showModal();
+}
 let game: ReturnType<typeof import("../host/game").createGame> | undefined;
 let latestMean: Vector = { x: 0, y: 0 };
 const motion = mountMotionControls(sendVector, () => role === "player" && !closedRoom && socket.readyState === WebSocket.OPEN);
 
 async function startGame() {
   gamePanel.hidden = false;
+  document.querySelector("main")!.classList.add("hosting");
   newMaze.disabled = true;
   try {
-    const [{ createGame }, { generateMaze }] = await Promise.all([import("../host/game"), import("../host/maze")]);
+    const [{ createGame }, { generateChallengeMaze }] = await Promise.all([import("../host/game"), import("../host/maze")]);
     if (socket.readyState !== WebSocket.OPEN) return;
     game = createGame(document.querySelector<HTMLCanvasElement>("#maze")!, (seconds) => {
-      mazeStatus.textContent = `Goal reached in ${seconds.toFixed(1)} seconds!`;
+      showResult(true, seconds);
+    }, {
+      durationSeconds: ROUND_SECONDS,
+      onLost: () => showResult(false),
+      onTick: (remaining, started) => {
+        const seconds = Math.ceil(remaining);
+        timer.textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+        timer.classList.toggle("urgent", started && seconds <= 15);
+      },
     });
-    const showMaze = () => {
-      const maze = generateMaze(12, 8, Math.floor(Math.random() * 2 ** 32));
-      mazeSeed.textContent = String(maze.seed);
-      mazeStatus.textContent = "Tilt together to roll the ball to the green goal.";
-      game!.setMaze(maze);
+    const showMaze = (restart = false) => {
+      if (socket.readyState !== WebSocket.OPEN) return;
+      if (resultDialog.open) resultDialog.close();
+      if (!restart || !currentMaze) currentMaze = generateChallengeMaze(Math.floor(Math.random() * 2 ** 32));
+      mazeSeed.textContent = String(currentMaze.seed);
+      mazeStatus.textContent = "Reach the green goal in 2 minutes. Timer starts when your team moves.";
+      game!.setMaze(currentMaze);
     };
-    newMaze.onclick = showMaze;
+    newMaze.onclick = () => showMaze();
+    restartRound.onclick = () => showMaze(true);
+    nextRound.onclick = () => showMaze();
+    exitRound.onclick = () => back.click();
     showMaze();
     game.setTeamVector(latestMean);
+    updatePlayerVectors();
     newMaze.disabled = false;
   } catch {
     mazeStatus.textContent = "Could not display the maze. Enable WebGL and reload. Players can still test their controls.";
@@ -69,8 +102,13 @@ function renderMean() {
   latestMean = { x: vectors.size ? x / vectors.size : 0, y: vectors.size ? y / vectors.size : 0 };
   mean.textContent = `(${latestMean.x.toFixed(2)}, ${latestMean.y.toFixed(2)})`;
   game?.setTeamVector(latestMean);
+  updatePlayerVectors();
+}
+function updatePlayerVectors() {
+  game?.setPlayerVectors(roster.map((player) => ({ ...player, vector: vectors.get(player.id) ?? { x: 0, y: 0 } })));
 }
 function renderPlayers(players: Player[]) {
+  roster = players;
   list.replaceChildren();
   const present = new Set(players.map((player) => player.id));
   for (const id of vectors.keys()) if (!present.has(id)) vectors.delete(id);
@@ -92,6 +130,7 @@ function renderPlayers(players: Player[]) {
 }
 socket.onopen = () => { status.textContent = "Create a room or enter a code to join."; buttons(false); };
 back.onclick = () => {
+  game?.stop();
   back.disabled = true;
   if (socket.readyState === WebSocket.CLOSED) {
     location.reload();
@@ -152,8 +191,11 @@ function sendVector(value: Vector) {
   socket.send(JSON.stringify({ type: "vec", seq: seq++, ...value }));
 }
 socket.onclose = () => {
+  game?.stop();
+  restartRound.disabled = nextRound.disabled = true;
   motion.stop();
   game?.setTeamVector({ x: 0, y: 0 });
+  game?.setPlayerVectors([]);
   newMaze.disabled = true;
   buttons(true);
   controls.disabled = true;
